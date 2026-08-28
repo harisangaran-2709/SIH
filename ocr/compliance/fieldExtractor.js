@@ -396,93 +396,40 @@ class FieldExtractor {
   // ── Net Quantity ──────────────────────────────────────────────────────────
 
   _extractNetQuantity(classified, detections) {
-    // Step 1: Find detections explicitly labeled as quantity
-    // Patterns like "Net Qty: 500 g", "Contents: 1 L"
-    const labeledPatterns = [
-      /(?:Net[.\s]*(?:Qty|Quantity|Wt\.?|Weight)[:\s]*|Contents?[:\s]*)[,.]?\s*(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|litre|liter|gram|kilogram|pieces?|pcs?|nos?)/i,
-    ];
-
-    const labeledResult = this._matchField('netQuantity', labeledPatterns, detections,
-      v => v.trim(), 'DETECTED', false);
-    if (labeledResult.status === 'DETECTED' && labeledResult.normalizedValue) {
-      // Normalize the quantity value
-      const qtyVal = this._normalizeQuantity(labeledResult.value);
-      if (qtyVal) {
-        labeledResult.normalizedValue = qtyVal;
-      }
-      return labeledResult;
-    }
-
-    // Step 2: Find number + unit pairs near quantity-context keywords
-    // "WEIGHT 500 G", "NET WT. 1 KG", "QTY 250 ML"
-    const qtyContextKeywords = [
-      'net wt', 'net weight', 'n.w.', 'wt.', 'quantity', 'qty',
-      'net qty', 'net contents', 'contents', 'net content',
-    ];
-
+    // ANCHOR-BASED: find quantity anchor text, then look for number+unit nearby
+    const anchors = ['NET WT', 'NET WEIGHT', 'NET QTY', 'QUANTITY', 'CONTENTS', 'CONTENT', 'NET CONTENTS', 'WEIGHT'];
     for (const det of detections) {
-      const upper = det.text.toUpperCase();
-      const hasContext = qtyContextKeywords.some(kw => upper.includes(kw.toUpperCase()));
-      if (!hasContext) continue;
-
-      // Find a number+unit in THIS detection or nearby
-      const nearby = this._getNearbyDetections(det, detections, null, 30, 200);
-      const allNearby = [det, ...nearby];
-
-      for (const nd of allNearby) {
-        const qtyMatch = nd.text.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|litre|liter|gram|kilogram|pieces?|pcs?|nos?)/i);
-        if (qtyMatch) {
-          const unitNorm = this._normalizeUnit(qtyMatch[2]);
-          const value = parseFloat(qtyMatch[1].replace(',', '.'));
-          if (value > 0 && value < 1000) { // sanity: reasonable qty range
-            return {
-              field: 'netQuantity',
-              value: `${value} ${unitNorm}`,
-              normalizedValue: { value, unit: unitNorm },
-              confidence: nd.confidence,
-              status: nd.confidence >= 0.90 ? 'DETECTED' : 'LOW_CONFIDENCE',
-              sourceDetectionIds: [makeDetectionId(nd)],
-              boundingBox: nd.boundingBox,
-              rawText: nd.rawText || nd.text,
-              ignoredClassifications: [], // populated below
-            };
+      const up = det.text.toUpperCase();
+      if (!anchors.some(a => up.includes(a))) continue;
+      // Search nearby bbox for quantity pattern
+      const nearby = this._getNearbyDetections(det, detections, null, 40, 300);
+      for (const nd of [det, ...nearby]) {
+        const m = nd.text.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|litre|liter|gram|kcals?|caps?|tabs?|pieces?|nos?|count)\b/i);
+        if (m) {
+          const val = parseFloat(m[1].replace(',', '.'));
+          // STRICT: must be quantity unit, not random number; also must not match licence/barcode lengths
+          if (val > 0 && val < 50000 && m[2].match(/kg|g|l|ml|caps?|tabs?|pieces?/i)) {
+            return this._detectedField('netQuantity', `${val} ${m[2].toLowerCase()}`,
+              { value: val, unit: this._normalizeUnit(m[2]) },
+              Math.min(det.confidence, nd.confidence || 0.9), nd,
+              [makeDetectionId(det), makeDetectionId(nd)].filter(Boolean));
           }
         }
       }
     }
-
-    // Step 3: Check classified detections for QUANTITY type
-    const qtyClassified = classified.find(d => d._classification.type === 'QUANTITY');
-    if (qtyClassified) {
-      const qtyMatch = qtyClassified.text.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|litre|liter|gram|pieces?|pcs?|nos?)/i);
-      if (qtyMatch) {
-        const value = parseFloat(qtyMatch[1].replace(',', '.'));
-        const unitNorm = this._normalizeUnit(qtyMatch[2]);
-        return {
-          field: 'netQuantity',
-          value: `${value} ${unitNorm}`,
-          normalizedValue: { value, unit: unitNorm },
-          confidence: qtyClassified.confidence,
-          status: 'DETECTED',
-          sourceDetectionIds: [makeDetectionId(qtyClassified)],
-          boundingBox: qtyClassified.boundingBox,
-          rawText: qtyClassified.rawText || qtyClassified.text,
-        };
+    // Fallback: classified QUANTITY type
+    const qty = classified.find(d => d._classification?.type === 'QUANTITY');
+    if (qty) {
+      const m = qty.text.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml)\b/i);
+      if (m) {
+        return this._detectedField('netQuantity', qty.text,
+          { value: parseFloat(m[1]), unit: this._normalizeUnit(m[2]) },
+          qty.confidence, qty, [makeDetectionId(qty)]);
       }
     }
-
-    // Step 4: NOT_DETECTED — don't use arbitrary numbers
-    // Explicitly list why we did NOT use other numbers
-    const notUsed = classified
-      .filter(d => !['QUANTITY', 'UNKNOWN'].includes(d._classification.type))
-      .map(d => ({ text: d.text, type: d._classification.type, confidence: d._classification.confidence }));
-
-    return {
-      ...this._missingField('netQuantity'),
-      notUsedNumbers: notUsed.slice(0, 10), // For WHY THIS RESULT panel
-      reason: 'No quantity + unit pattern detected in labeled context. ' +
-              'Other numbers were classified as ' + notUsed.map(n => n.type).join(', ') + ' and excluded.',
-    };
+    // Nothing found — NOT_DETECTED (never FAIL)
+    return { ...this._missingField('netQuantity'), status: 'NOT_DETECTED',
+      reason: 'No quantity anchor (NET WT / NET QTY / CONTENTS) found near a number with weight/volume unit. Licence/registration/barcode numbers excluded by classification.' };
   }
 
   _normalizeUnit(unit) {
@@ -573,86 +520,79 @@ class FieldExtractor {
   // ── Dates ────────────────────────────────────────────────────────────────
 
   _extractManufacturingDate(classified, detections) {
+    // ANCHOR-BASED: find MFG / MANUFACTURED BY / DATE OF MFG anchors, then nearby date
+    const anchors = ['MFG', 'MFR', 'MANUFACTURED', 'MFG. DATE', 'MFG DATE', 'MFD', 'DATE OF MFG', 'DATE OF MANUFACTURE'];
+    for (const det of detections) {
+      const t = det.text.trim().toUpperCase();
+      if (!anchors.some(a => t === a || t.includes(a) || a.includes(t))) continue;
+      const nearby = this._getNearbyDetections(det, detections, null, 50, 200);
+      for (const nd of nearby) {
+        const cls = classifyNumericString(nd.text);
+        if (cls.type === 'DATE') {
+          const norm = normalizeDate(nd.text);
+          return this._detectedField('manufacturingDate', nd.text, norm,
+            Math.min(det.confidence, nd.confidence), nd,
+            [makeDetectionId(det), makeDetectionId(nd)].filter(Boolean));
+        }
+      }
+      // Also accept raw month-year patterns
+      for (const nd of nearby) {
+        const raw = nd.text.match(/([A-Za-z]{3,9})[.,-]?\s*(\d{4})/i);
+        if (raw) {
+          const norm = normalizeDate(nd.text);
+          return this._detectedField('manufacturingDate', nd.text, norm,
+            Math.min(det.confidence, nd.confidence), nd,
+            [makeDetectionId(det), makeDetectionId(nd)].filter(Boolean));
+        }
+      }
+    }
+    // Regex fallback
     const prefixes = [
       /(?:MFG\.?\s*(?:DATE|D\.?|ON)?|Manufacturing\s*(?:date|on)?|Manufactured?\s*(?:on|date)?|MFD\.?)[,:]?\s*(.+)/i,
-      /(?:Date\s*of\s*(?:Mfg|Manufacturing|Manufacture))[,:]?\s*(.+)/i,
     ];
-
     const result = this._matchField('manufacturingDate', prefixes, detections,
       v => normalizeDate(v.trim()), 'DETECTED');
     if (result.status !== 'MISSING') return result;
-
-    // Fallback: find MFG label and get adjacent date
-    for (const det of detections) {
-      const t = det.text.trim();
-      if (/^MFG\.?$/i.test(t) || /^MANUFACTURING$/i.test(t)) {
-        const nearby = this._getNearbyDetections(det, detections, null, 30, 150);
-        for (const nd of nearby) {
-          const cls = classifyNumericString(nd.text);
-          if (cls.type === 'DATE') {
-            return this._detectedField('manufacturingDate', nd.text,
-              normalizeDate(nd.text), nd.confidence, nd, [makeDetectionId(det), makeDetectionId(nd)]);
-          }
-        }
-        // Also try raw month-year without classification
-        const dateMatch = nd => nd.text.match(/([A-Za-z]{3,9})[.,-]?\s*(\d{4})/i);
-      }
-    }
-
-    return result;
+    return { ...this._missingField('manufacturingDate'), status: 'NOT_DETECTED',
+      reason: 'No MFG/MANUFACTURED anchor found near a date. May be on a different surface.' };
   }
 
   _extractPackingDate(classified, detections) {
-    const prefixes = [
-      /(?:PKD\.?|Packing\s*(?:Date)?|Packed\s*(?:on|date)?|Date\s*of\s*Packing)[,:]?\s*(.+)/i,
-    ];
-
-    const result = this._matchField('packingDate', prefixes, detections,
-      v => normalizeDate(v.trim()), 'DETECTED');
-    if (result.status !== 'MISSING') return result;
-
-    // Fallback: find PKD label
+    const anchors = ['PKD', 'PACKING', 'DATE OF PACKING'];
     for (const det of detections) {
-      if (/^PKD\.?$/i.test(det.text.trim())) {
-        const nearby = this._getNearbyDetections(det, detections, null, 30, 150);
-        for (const nd of nearby) {
-          const cls = classifyNumericString(nd.text);
-          if (cls.type === 'DATE') {
-            return this._detectedField('packingDate', nd.text,
-              normalizeDate(nd.text), nd.confidence, nd, [makeDetectionId(det), makeDetectionId(nd)]);
-          }
+      const t = det.text.trim().toUpperCase();
+      if (!anchors.some(a => t === a || t.includes(a))) continue;
+      const nearby = this._getNearbyDetections(det, detections, null, 50, 200);
+      for (const nd of nearby) {
+        const cls = classifyNumericString(nd.text);
+        if (cls.type === 'DATE') {
+          return this._detectedField('packingDate', nd.text,
+            normalizeDate(nd.text), Math.min(det.confidence, nd.confidence), nd,
+            [makeDetectionId(det), makeDetectionId(nd)].filter(Boolean));
         }
       }
     }
-
-    return result;
+    return { ...this._missingField('packingDate'), status: 'NOT_DETECTED' };
   }
 
   _extractExpiryDate(classified, detections) {
-    const prefixes = [
-      /(?:EXP\.?\s*(?:DATE|D\.?)?|Expiry\s*(?:date)?|Best\s*Before|Use\s*By|Use\s*Before)[,:]?\s*(.+)/i,
-    ];
-
-    const result = this._matchField('expiryDate', prefixes, detections,
-      v => normalizeDate(v.trim()), 'DETECTED');
-    if (result.status !== 'MISSING') return result;
-
-    // Fallback: find EXP label
+    const anchors = ['EXP', 'EXPIRY', 'EXP. DATE', 'EXP DATE', 'BEST BEFORE', 'USE BY', 'EXPIRY DATE'];
     for (const det of detections) {
-      const t = det.text.trim();
-      if (/^EXP\.?$/i.test(t) || /^EXPIRY$/i.test(t) || /^BEST\s*BEFORE$/i.test(t)) {
-        const nearby = this._getNearbyDetections(det, detections, null, 30, 150);
-        for (const nd of nearby) {
-          const cls = classifyNumericString(nd.text);
-          if (cls.type === 'DATE') {
-            return this._detectedField('expiryDate', nd.text,
-              normalizeDate(nd.text), nd.confidence, nd, [makeDetectionId(det), makeDetectionId(nd)]);
-          }
+      const t = det.text.trim().toUpperCase();
+      if (!anchors.some(a => t === a || t.includes(a) || a.includes(t))) continue;
+      const nearby = this._getNearbyDetections(det, detections, null, 50, 200);
+      for (const nd of nearby) {
+        const cls = classifyNumericString(nd.text);
+        if (cls.type === 'DATE') {
+          const norm = normalizeDate(nd.text);
+          return this._detectedField('expiryDate', nd.text, norm,
+            Math.min(det.confidence, nd.confidence), nd,
+            [makeDetectionId(det), makeDetectionId(nd)].filter(Boolean));
         }
       }
     }
-
-    return result;
+    return { ...this._missingField('expiryDate'), status: 'NOT_DETECTED',
+      reason: 'No EXP/EXPIRY anchor found near a date. May be on a different surface.' };
   }
 
   _extractBestBefore(classified, detections) {
