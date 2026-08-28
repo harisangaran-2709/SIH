@@ -151,12 +151,28 @@ class ProductClassifier {
     let bestMatch = null;
     let bestScore = 0;
 
-    // Match against categories
-    for (const [category, config] of Object.entries(PRODUCT_CATEGORIES)) {
+    // Match against categories.
+    // Iterate in priority order: specific categories first so their longer
+    // keywords take precedence over the generic "oil" / "supplement" keywords.
+    const PRIORITY_ORDER = [
+      'fish_oil', 'animal_oil', 'food_supplement', 'pharmaceutical',
+      'pulses', 'cereals', 'flour', 'edible_oil', 'salt', 'sugar',
+      'spices', 'tea', 'coffee', 'biscuits', 'beverages', 'milk_powder',
+      'detergent', 'soap', 'cosmetics', 'paint', 'cement', 'textile',
+    ];
+
+    for (const category of PRIORITY_ORDER) {
+      const config = PRODUCT_CATEGORIES[category];
+      if (!config) continue;
+
       let score = 0;
-      for (const keyword of config.keywords) {
+      // Sort keywords longest-first so "fish oil" beats "oil" on the same text
+      const sortedKeywords = [...config.keywords].sort((a, b) => b.length - a.length);
+      for (const keyword of sortedKeywords) {
         if (allText.includes(keyword.toLowerCase())) {
           score += 1;
+          // Bonus: exact match of a long keyword (>5 chars) scores +1 extra
+          if (keyword.length > 5) score += 1;
         }
       }
 
