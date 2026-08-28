@@ -1,0 +1,21 @@
+﻿{
+  "name": "ocr-module",
+  "version": "1.0.0",
+  "description": "OCR microservice + Node.js API for packaged commodity compliance checker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "start:ocr": "python -m service.app",
+    "test:ocr": "node tests/testOCR.js",
+    "install:python": "pip install -r service/requirements.txt"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "form-data": "^4.0.0",
+    "multer": "^2.0.0",
+    "zod": "^3.23.8"
+  }
+}

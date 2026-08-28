@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "PowerShell(python --version 2>&1; node --version 2>&1)",
+      "PowerShell(pip show *)",
+      "PowerShell(pip *)",
+      "PowerShell(python -c \"import paddleocr; print\\('paddleocr version:', paddleocr.__version__\\)\")"
+    ]
+  }
+}

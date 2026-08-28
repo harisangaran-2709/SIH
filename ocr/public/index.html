@@ -1,0 +1,459 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OCR Testing Page – Package Text Detection</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    header {
+      padding: 20px 32px;
+      border-bottom: 1px solid #1e2736;
+      display: flex; align-items: center; gap: 16px;
+    }
+    header h1 { font-size: 1.2rem; font-weight: 600; color: #60a5fa; }
+    header span { font-size: 0.8rem; color: #64748b; }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 32px; }
+
+    /* ---- Upload zone ---- */
+    #drop-zone {
+      border: 2px dashed #334155;
+      border-radius: 12px;
+      padding: 48px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 24px;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: #60a5fa;
+      background: #1e2736;
+    }
+    #drop-zone p { color: #64748b; margin-top: 8px; font-size: 0.9rem; }
+    #drop-zone strong { color: #94a3b8; }
+
+    #file-input { display: none; }
+
+    /* ---- Controls ---- */
+    .controls { display: flex; gap: 12px; margin-bottom: 32px; flex-wrap: wrap; }
+    button {
+      padding: 10px 22px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #run-btn { background: #3b82f6; color: #fff; font-weight: 600; }
+    #clear-btn { background: #1e2736; color: #94a3b8; border: 1px solid #334155; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #64748b; }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid #334155; border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Results grid ---- */
+    #results { display: grid; gap: 32px; }
+
+    .image-card {
+      background: #1a2234;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #1e2736;
+    }
+    .image-card-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #1e2736;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .image-card-header h2 { font-size: 1rem; color: #e2e8f0; }
+    .meta-row { display: flex; gap: 16px; font-size: 0.8rem; color: #64748b; }
+    .meta-row span b { color: #94a3b8; }
+
+    .image-card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    @media(max-width: 800px) { .image-card-body { grid-template-columns: 1fr; } }
+
+    /* Canvas / image panel */
+    .canvas-panel { position: relative; padding: 24px; background: #0f1117; }
+    .canvas-panel canvas { max-width: 100%; border-radius: 8px; display: block; }
+
+    /* Detections panel */
+    .detections-panel { padding: 24px; overflow: auto; max-height: 640px; }
+    .detections-panel h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 16px; }
+
+    .detection-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e2736;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .detection-row:hover { background: #1e2736; border-radius: 6px; padding-left: 8px; }
+    .detection-row:last-child { border-bottom: none; }
+
+    .conf-badge {
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      min-width: 48px;
+      text-align: center;
+    }
+    .conf-high { background: #14532d; color: #4ade80; }
+    .conf-mid  { background: #713f12; color: #fb923c; }
+    .conf-low  { background: #450a0a; color: #f87171; }
+
+    .det-text { font-size: 0.9rem; color: #e2e8f0; word-break: break-word; }
+    .det-raw  { font-size: 0.75rem; color: #64748b; margin-top: 2px; font-family: monospace; }
+
+    /* JSON viewer */
+    .json-panel {
+      border-top: 1px solid #1e2736;
+    }
+    .json-toggle {
+      width: 100%; background: none; color: #64748b; border: none;
+      padding: 12px 24px; text-align: left; cursor: pointer; font-size: 0.8rem;
+      display: flex; justify-content: space-between;
+    }
+    .json-toggle:hover { color: #94a3b8; }
+    .json-content { display: none; padding: 0 24px 24px; }
+    .json-content.open { display: block; }
+    pre { background: #0f1117; border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 0.8rem; color: #a78bfa; line-height: 1.6; }
+
+    /* Error card */
+    .error-card { background: #1a0f0f; border: 1px solid #450a0a; border-radius: 12px; padding: 24px; color: #f87171; }
+    .error-card h2 { margin-bottom: 8px; }
+    .error-card p { font-size: 0.9rem; }
+
+    /* Empty state */
+    .empty { text-align: center; color: #334155; padding: 64px; font-size: 1rem; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🔍 OCR Testing Page</h1>
+  <span>Package text detection · PaddleOCR · For debugging only</span>
+</header>
+
+<main>
+
+  <!-- Upload zone -->
+  <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div style="font-size: 2.5rem;">📦</div>
+    <strong>Drop package images here</strong>
+    <p>or click to browse · JPG, JPEG, PNG, WEBP · Max 10 MB each</p>
+    <p id="file-list" style="margin-top: 12px; color: #60a5fa;"></p>
+  </div>
+  <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp" multiple />
+
+  <!-- Controls -->
+  <div class="controls">
+    <button id="run-btn" disabled onclick="runOCR()">▶ Run OCR</button>
+    <button id="clear-btn" onclick="clearAll()">✕ Clear</button>
+    <div class="status">
+      <div class="spinner" id="spinner"></div>
+      <span id="status-text">Select images to begin</span>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results"><div class="empty">No results yet</div></div>
+
+</main>
+
+<script>
+const API = '/api/ocr';
+let selectedFiles = [];
+
+// ---- File selection ----
+document.getElementById('file-input').addEventListener('change', e => {
+  selectedFiles = Array.from(e.target.files);
+  onFilesSelected();
+});
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  selectedFiles = Array.from(e.dataTransfer.files).filter(f => /\.(jpe?g|png|webp)$/i.test(f.name));
+  onFilesSelected();
+});
+
+function onFilesSelected() {
+  document.getElementById('file-list').textContent =
+    selectedFiles.length ? selectedFiles.map(f => f.name).join(', ') : '';
+  document.getElementById('run-btn').disabled = selectedFiles.length === 0;
+  setStatus('');
+}
+
+// ---- OCR ----
+async function runOCR() {
+  if (!selectedFiles.length) return;
+
+  setLoading(true);
+  setStatus('Running OCR…');
+
+  const form = new FormData();
+  selectedFiles.forEach(f => form.append('images', f));
+
+  try {
+    const res = await fetch(API, { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      showError(data.error || 'OCR request failed');
+      return;
+    }
+    renderResults(data.results, selectedFiles);
+    const total = data.results.reduce((s, r) => s + (r.detections?.length || 0), 0);
+    setStatus(`✓ ${data.results.length} image(s) · ${total} detections`);
+  } catch (err) {
+    showError('Network error: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ---- Render results ----
+function renderResults(results, files) {
+  const container = document.getElementById('results');
+  container.innerHTML = '';
+
+  results.forEach((result, idx) => {
+    if (result.error && !result.detections?.length) {
+      container.appendChild(makeErrorCard(result.imageId, result.error));
+      return;
+    }
+
+    const card = makeImageCard(result, files[idx]);
+    container.appendChild(card);
+  });
+}
+
+function makeImageCard(result, file) {
+  const card = document.createElement('div');
+  card.className = 'image-card';
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className = 'image-card-header';
+  hdr.innerHTML = `
+    <h2>📄 ${result.imageId}</h2>
+    <div class="meta-row">
+      <span><b>Size</b> ${result.width}×${result.height}px</span>
+      <span><b>Time</b> ${result.processingTimeMs}ms</span>
+      <span><b>Detections</b> ${result.detections.length}</span>
+      <span><b>Pre-processing</b> ${(result.preprocessingSteps || []).join(', ') || 'none'}</span>
+    </div>`;
+  card.appendChild(hdr);
+
+  // Body (canvas + detections)
+  const body = document.createElement('div');
+  body.className = 'image-card-body';
+
+  // Canvas panel
+  const canvasPanel = document.createElement('div');
+  canvasPanel.className = 'canvas-panel';
+  const canvas = document.createElement('canvas');
+  canvasPanel.appendChild(canvas);
+  body.appendChild(canvasPanel);
+
+  // Detections panel
+  const detPanel = makeDetectionsPanel(result.detections, canvas);
+  body.appendChild(detPanel);
+  card.appendChild(body);
+
+  // JSON panel
+  const jsonPanel = makeJsonPanel(result);
+  card.appendChild(jsonPanel);
+
+  // Draw image + boxes on canvas
+  if (file) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      drawBoxes(ctx, result.detections);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+
+  return card;
+}
+
+function makeDetectionsPanel(detections, canvas) {
+  const panel = document.createElement('div');
+  panel.className = 'detections-panel';
+  panel.innerHTML = `<h3>Detected Text (${detections.length})</h3>`;
+
+  detections.forEach((det, i) => {
+    const row = document.createElement('div');
+    row.className = 'detection-row';
+
+    const pct = Math.round(det.confidence * 100);
+    const cls = pct >= 80 ? 'conf-high' : pct >= 50 ? 'conf-mid' : 'conf-low';
+
+    row.innerHTML = `
+      <span class="conf-badge ${cls}">${pct}%</span>
+      <div>
+        <div class="det-text">${escHtml(det.text)}</div>
+        ${det.rawText !== det.text ? `<div class="det-raw">raw: ${escHtml(det.rawText)}</div>` : ''}
+        ${det.belowThreshold ? '<div class="det-raw" style="color:#f87171">⚠ below threshold</div>' : ''}
+      </div>`;
+
+    // Hover: highlight box on canvas
+    row.addEventListener('mouseenter', () => highlightBox(canvas, detections, i));
+    row.addEventListener('mouseleave', () => highlightBox(canvas, detections, -1));
+
+    panel.appendChild(row);
+  });
+
+  if (!detections.length) {
+    panel.innerHTML += '<p style="color:#64748b;margin-top:12px">No text detected</p>';
+  }
+
+  return panel;
+}
+
+function makeJsonPanel(result) {
+  const panel = document.createElement('div');
+  panel.className = 'json-panel';
+
+  const toggle = document.createElement('button');
+  toggle.className = 'json-toggle';
+  toggle.innerHTML = '<span>{ } Show raw JSON</span><span>▼</span>';
+
+  const content = document.createElement('div');
+  content.className = 'json-content';
+  const pre = document.createElement('pre');
+  pre.textContent = JSON.stringify(result, null, 2);
+  content.appendChild(pre);
+
+  toggle.onclick = () => {
+    content.classList.toggle('open');
+    toggle.querySelector('span:last-child').textContent = content.classList.contains('open') ? '▲' : '▼';
+  };
+
+  panel.appendChild(toggle);
+  panel.appendChild(content);
+  return panel;
+}
+
+function makeErrorCard(imageId, error) {
+  const div = document.createElement('div');
+  div.className = 'error-card';
+  div.innerHTML = `<h2>❌ ${escHtml(imageId)}</h2><p>${escHtml(error)}</p>`;
+  return div;
+}
+
+// ---- Canvas drawing ----
+const COLORS = ['#60a5fa','#34d399','#f472b6','#fb923c','#a78bfa','#fbbf24','#38bdf8'];
+
+function drawBoxes(ctx, detections, highlightIdx = -1) {
+  detections.forEach((det, i) => {
+    const pts = det.boundingBox;
+    if (!pts?.length) return;
+
+    const isHL = i === highlightIdx;
+    ctx.strokeStyle = isHL ? '#fbbf24' : COLORS[i % COLORS.length];
+    ctx.lineWidth = isHL ? 4 : 2;
+    ctx.globalAlpha = det.belowThreshold ? 0.5 : 1;
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Semi-transparent fill on highlight
+    if (isHL) {
+      ctx.fillStyle = 'rgba(251,191,36,0.15)';
+      ctx.fill();
+    }
+  });
+  ctx.globalAlpha = 1;
+}
+
+function highlightBox(canvas, detections, idx) {
+  const ctx = canvas.getContext('2d');
+  // Redraw image – we stored the image in a data attribute approach.
+  // Simpler: just redraw boxes with the highlight
+  const snapshot = canvas._snapshot;
+  if (!snapshot) return;
+  ctx.putImageData(snapshot, 0, 0);
+  drawBoxes(ctx, detections, idx);
+}
+
+// After drawing, save snapshot so hover-redraw can restore the base.
+function saveSnapshot(canvas) {
+  const ctx = canvas.getContext('2d');
+  canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+// Patch drawBoxes call to save snapshot first
+const _origDrawBoxes = drawBoxes;
+// We'll save snapshot after the image.onload draws the image and calls drawBoxes.
+
+// ---- Utilities ----
+function setLoading(on) {
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('run-btn').disabled = on;
+}
+
+function setStatus(msg) {
+  document.getElementById('status-text').textContent = msg;
+}
+
+function showError(msg) {
+  const container = document.getElementById('results');
+  container.innerHTML = '';
+  container.appendChild(makeErrorCard('Error', msg));
+  setStatus('Failed');
+}
+
+function clearAll() {
+  selectedFiles = [];
+  document.getElementById('file-input').value = '';
+  document.getElementById('file-list').textContent = '';
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('results').innerHTML = '<div class="empty">No results yet</div>';
+  setStatus('Select images to begin');
+}
+
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// Save canvas snapshot after image load + box draw so hover works
+document.addEventListener('DOMContentLoaded', () => {
+  const _orig = Image.prototype;
+  // observe canvas redraws via MutationObserver on results
+  const obs = new MutationObserver(() => {
+    document.querySelectorAll('.canvas-panel canvas').forEach(c => {
+      if (!c._snapshot && c.width > 0) {
+        const ctx = c.getContext('2d');
+        c._snapshot = ctx.getImageData(0, 0, c.width, c.height);
+      }
+    });
+  });
+  obs.observe(document.getElementById('results'), { childList: true, subtree: true });
+});
+</script>
+</body>
+</html>
