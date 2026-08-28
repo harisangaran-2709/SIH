@@ -28,6 +28,25 @@ const PRODUCT_CATEGORIES = {
     isFood: true,
     subcategories: ['sunflower_oil', 'mustard_oil', 'coconut_oil', 'palm_oil', 'ghee'],
   },
+  fish_oil: {
+    keywords: ['fish oil', 'omega-3', 'omega 3', 'cod liver oil', 'salmon oil'],
+    isFood: true,
+    isFoodSupplement: true,
+  },
+  animal_oil: {
+    keywords: ['animal oil', 'lard', 'tallow', 'animal fat'],
+    isFood: true,
+  },
+  food_supplement: {
+    keywords: ['supplement', 'dietary supplement', 'vitamin', 'capsule', 'tablet', 'nutraceutical'],
+    isFood: true,
+    isFoodSupplement: true,
+  },
+  pharmaceutical: {
+    keywords: ['medicine', 'drug', 'pharmaceutical', 'tablet', 'capsule', 'syrup', 'injection'],
+    isFood: false,
+    isPharmaceutical: true,
+  },
   salt: {
     keywords: ['salt', 'namak', 'iodised', 'iodized'],
     isFood: true,
@@ -173,11 +192,21 @@ class ProductClassifier {
       confidence = Math.min(confidence + 0.2, 1.0);
     }
 
+    // If confidence is low, mark status as REVIEW
+    const status = confidence < 0.5 ? 'REVIEW' : 'DETECTED';
+    const reason = confidence < 0.5
+      ? 'Low confidence product classification — inspector should verify product category'
+      : `Classified as ${bestMatch.category} based on keyword match`;
+
     return {
       category: bestMatch.category,
       subcategory,
       confidence,
       isFood: bestMatch.config.isFood,
+      isFoodSupplement: bestMatch.config.isFoodSupplement || false,
+      isPharmaceutical: bestMatch.config.isPharmaceutical || false,
+      status,
+      reason,
     };
   }
 

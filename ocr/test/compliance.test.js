@@ -184,10 +184,10 @@ async function runTests() {
     console.assert(result.packageType.type === 'retail_package', 'Should be retail package');
     console.assert(result.applicability.chapterTwoApplies === true, 'Should be applicable');
     console.assert(result.exemption.isExempt === false, 'Should not be exempt');
-    console.assert(result.finalStatus === 'PASS' || result.finalStatus === 'REVIEW', 'Should pass or require review');
-    console.assert(result.summary.pass > 0, 'Should have passing rules');
-    console.assert(result.declarations.mrp.detected === true, 'Should detect MRP');
-    console.assert(result.declarations.netQuantity.detected === true, 'Should detect net quantity');
+    console.assert(result.finalStatus === 'COMPLIANT' || result.finalStatus === 'REVIEW', 'Should be COMPLIANT or REVIEW');
+    console.assert(result.summary.compliant > 0, 'Should have compliant rules');
+    console.assert(result.declarations.mrp?.detected === true || result.declarations.mrp?.status === 'PASS', 'Should detect MRP');
+    console.assert(result.declarations.netQuantity?.detected === true || result.declarations.netQuantity?.status === 'PASS', 'Should detect net quantity');
 
     console.log('✓ Test 1 PASSED\n');
     passed++;
@@ -202,10 +202,11 @@ async function runTests() {
     const result = await manager.analyze(mockOCRMissingDeclarations);
 
     console.assert(result.success === true, 'Should succeed');
-    console.assert(result.finalStatus === 'POTENTIAL_NON_COMPLIANCE', 'Should be non-compliant');
-    console.assert(result.summary.fail > 0, 'Should have failing rules');
-    console.assert(result.declarations.mrp.detected === false, 'MRP should be missing');
-    console.assert(result.findings.length > 0, 'Should have findings');
+    console.assert(result.finalStatus === 'REVIEW', 'Should be REVIEW (missing declarations need inspector verification, not FAIL)');
+    console.assert(result.summary.nonCompliant === 0, 'Should have zero FAIL rules per CRITICAL FIX spec — missing declarations → REVIEW');
+    console.assert(result.summary.review > 0, 'Should have REVIEW rules for missing declarations');
+    console.assert(result.declarations.manufacturer?.detected === false || result.declarations.manufacturer?.status === 'REVIEW', 'Manufacturer should be missing/REVIEW');
+    console.assert(result.findings?.length > 0 || result.ruleResults?.some(r => r.status === 'REVIEW'), 'Should have findings or REVIEW rules');
 
     console.log('✓ Test 2 PASSED\n');
     passed++;
@@ -221,7 +222,7 @@ async function runTests() {
 
     console.assert(result.success === true, 'Should succeed');
     console.assert(result.exemption.isExempt === true, 'Should be exempt');
-    console.assert(result.finalStatus === 'PASS', 'Exempt packages should pass');
+    console.assert(result.finalStatus === 'COMPLIANT', 'Exempt packages should be COMPLIANT');
 
     console.log('✓ Test 3 PASSED\n');
     passed++;
@@ -237,7 +238,7 @@ async function runTests() {
 
     console.assert(result.success === true, 'Should succeed');
     console.assert(result.applicability.chapterTwoApplies === false, 'Should not be applicable');
-    console.assert(result.finalStatus === 'PASS', 'Non-applicable packages should pass');
+    console.assert(result.finalStatus === 'NOT_APPLICABLE', 'Non-applicable packages should be NOT_APPLICABLE');
 
     console.log('✓ Test 4 PASSED\n');
     passed++;

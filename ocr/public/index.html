@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -16,7 +16,7 @@
     header h1 { font-size: 1.2rem; font-weight: 600; color: #60a5fa; }
     header span { font-size: 0.8rem; color: #64748b; }
 
-    main { max-width: 1200px; margin: 0 auto; padding: 32px; }
+    main { max-width: 1400px; margin: 0 auto; padding: 32px; }
 
     /* ---- Upload zone ---- */
     #drop-zone {
@@ -116,9 +116,7 @@
     .det-raw  { font-size: 0.75rem; color: #64748b; margin-top: 2px; font-family: monospace; }
 
     /* JSON viewer */
-    .json-panel {
-      border-top: 1px solid #1e2736;
-    }
+    .json-panel { border-top: 1px solid #1e2736; }
     .json-toggle {
       width: 100%; background: none; color: #64748b; border: none;
       padding: 12px 24px; text-align: left; cursor: pointer; font-size: 0.8rem;
@@ -161,9 +159,14 @@
     .badge-pass    { background: #14532d; color: #4ade80; }
     .badge-fail    { background: #450a0a; color: #f87171; }
     .badge-review  { background: #713f12; color: #fb923c; }
+    .badge-na      { background: #1e2736; color: #64748b; }
+    .badge-exempt  { background: #1e2736; color: #60a5fa; }
 
     .compliance-meta {
       display: flex; gap: 16px; font-size: 0.8rem; color: #64748b; flex-wrap: wrap;
+    }
+    .compliance-meta .warn {
+      background: #713f12; color: #fb923c; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;
     }
 
     .compliance-body { padding: 24px; }
@@ -198,8 +201,56 @@
     .section-hdr {
       font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;
       color: #64748b; margin: 24px 0 12px; border-bottom: 1px solid #1e2736;
-      padding-bottom: 6px;
+      padding-bottom: 6px; display: flex; align-items: center; gap: 8px;
     }
+
+    /* Image Coverage panel */
+    .coverage-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px; margin-bottom: 8px;
+    }
+    .coverage-chip {
+      background: #1e2736; border-radius: 8px; padding: 10px;
+      text-align: center; font-size: 0.8rem;
+    }
+    .coverage-chip .surf { font-size: 1.2rem; }
+    .coverage-chip .lbl { color: #64748b; font-size: 0.7rem; margin-top: 2px; }
+    .coverage-warning {
+      background: #713f12; border-radius: 6px; padding: 10px 14px;
+      font-size: 0.8rem; color: #fb923c; margin-top: 8px;
+    }
+
+    /* Extracted fields panel */
+    .fields-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+    .field-card {
+      background: #0f1117; border-radius: 8px; padding: 12px 14px;
+      border-left: 3px solid #334155;
+    }
+    .field-card.f-detected { border-left-color: #4ade80; }
+    .field-card.f-review    { border-left-color: #fb923c; }
+    .field-card.f-na        { border-left-color: #64748b; }
+
+    .field-label {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #64748b; margin-bottom: 4px;
+    }
+    .field-value {
+      font-size: 0.9rem; color: #e2e8f0; word-break: break-word;
+      margin-bottom: 4px;
+    }
+    .field-meta {
+      font-size: 0.72rem; color: #64748b;
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .field-status-badge {
+      font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; font-weight: 600;
+    }
+    .status-detected { background: #14532d; color: #4ade80; }
+    .status-review   { background: #713f12; color: #fb923c; }
+    .status-na       { background: #1e2736; color: #64748b; }
 
     /* Declarations table */
     .decl-table { width: 100%; border-collapse: collapse; }
@@ -228,37 +279,84 @@
     .finding-item.sev-low    { border-left-color: #4ade80; }
     .finding-item.sev-info   { border-left-color: #60a5fa; }
 
-    .finding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .finding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: gap: 8px; }
     .finding-rule { font-size: 0.75rem; color: #64748b; font-family: monospace; }
     .finding-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
     .finding-detail { font-size: 0.85rem; color: #94a3b8; }
     .finding-detail strong { color: #e2e8f0; }
     .finding-reason { font-size: 0.78rem; color: #64748b; margin-top: 6px; font-style: italic; }
 
+    /* WHY THIS RESULT panel */
+    .why-panel {
+      background: #1a2234; border: 1px solid #334155; border-radius: 8px;
+      padding: 12px 14px; margin-top: 8px;
+    }
+    .why-row {
+      display: grid; grid-template-columns: 120px 1fr; gap: 8px;
+      font-size: 0.8rem; margin-bottom: 6px;
+    }
+    .why-row:last-child { margin-bottom: 0; }
+    .why-key { color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; padding-top: 2px; }
+    .why-val { color: #e2e8f0; }
+    .why-val.warn { color: #fb923c; }
+    .why-val.success { color: #4ade80; }
+
     /* Evidence crops grid */
     .evidence-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 12px; margin-top: 12px;
     }
     .evidence-crop {
       background: #0f1117; border-radius: 8px; overflow: hidden;
-      border: 1px solid #1e2736;
+      border: 1px solid #1e2736; cursor: pointer;
+      transition: border-color 0.15s;
     }
+    .evidence-crop:hover { border-color: #60a5fa; }
     .evidence-crop canvas {
-      display: block; width: 100%; height: 160px; object-fit: contain;
+      display: block; width: 100%; height: 140px; object-fit: contain;
       background: #0a0d14;
     }
     .evidence-crop-info {
       padding: 8px 12px; font-size: 0.75rem; color: #64748b;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .evidence-crop-info strong { color: #94a3b8; }
 
-    /* Phase badges */
+    /* Grouped rules card */
+    .grouped-rules-card {
+      background: #0f1117; border-radius: 8px; overflow: hidden;
+      margin-bottom: 12px; border: 1px solid #334155;
+    }
+    .grouped-rules-header {
+      background: #1e2736; padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .grouped-rules-header h4 { font-size: 0.85rem; color: #e2e8f0; }
+    .grouped-rules-body { padding: 12px 14px; }
+    .grouped-rules-desc { font-size: 0.78rem; color: #64748b; margin-bottom: 10px; line-height: 1.5; }
+    .grouped-rules-list { display: flex; flex-direction: column; gap: 6px; }
+    .grouped-rule-item {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; padding: 6px 0;
+      border-bottom: 1px solid #1e2736;
+    }
+    .grouped-rule-item:last-child { border-bottom: none; }
+    .grouped-rule-item .rule-title { color: #94a3b8; }
+    .grouped-rule-item .rule-ref { color: #64748b; font-size: 0.72rem; margin-left: 8px; font-family: monospace; }
+
+    /* Phase section */
+    .phase-section {
+      margin-bottom: 16px;
+    }
     .phase-badge {
       background: #1e2736; border-radius: 4px; padding: 1px 6px;
       font-size: 0.7rem; color: #60a5fa; margin-left: 6px;
     }
+
+    /* Status colors */
+    .status-pass    { color: #4ade80; }
+    .status-fail    { color: #f87171; }
+    .status-review  { color: #fb923c; }
+    .status-na      { color: #64748b; }
   </style>
 </head>
 <body>
@@ -301,7 +399,9 @@
 const API = '/api/ocr';
 const COMPLIANCE_API = '/api/compliance/analyze';
 let selectedFiles = [];
-let lastOcrResults = null; // stored so compliance button can use it
+let lastOcrResults = null;
+let lastComplianceData = null;
+let imageCanvases = []; // stores canvas refs for crop generation
 
 // ---- File selection ----
 document.getElementById('file-input').addEventListener('change', e => {
@@ -344,8 +444,8 @@ async function runOCR() {
       showError(data.error || 'OCR request failed');
       return;
     }
-    renderResults(data.results, selectedFiles);
-    lastOcrResults = data; // save for compliance
+    imageCanvases = renderResults(data.results, selectedFiles);
+    lastOcrResults = data;
     const total = data.results.reduce((s, r) => s + (r.detections?.length || 0), 0);
     setStatus(`✓ ${data.results.length} image(s) · ${total} detections`);
   } catch (err) {
@@ -376,8 +476,10 @@ async function runCompliance() {
       showError(data.error || 'Compliance analysis failed');
       return;
     }
+    lastComplianceData = data;
     renderComplianceResults(data);
-    setStatus(`✓ Compliance analyzed — ${data.summary.pass} pass · ${data.summary.fail} fail · ${data.summary.review} review`);
+    const s = data.summary || {};
+    setStatus(`✓ Compliance analyzed — ${s.compliant || 0} pass · ${s.nonCompliant || 0} fail · ${s.review || 0} review`);
   } catch (err) {
     showError('Network error: ' + err.message);
   } finally {
@@ -385,87 +487,175 @@ async function runCompliance() {
   }
 }
 
+// ── Compliance Results Renderer ──────────────────────────────────────────────
+
 function renderComplianceResults(data) {
   const panel = document.getElementById('compliance-results');
   panel.style.display = 'block';
 
-  const statusBadge = data.finalStatus === 'PASS'
-    ? '<span class="badge badge-pass">PASS</span>'
-    : data.finalStatus === 'POTENTIAL_NON_COMPLIANCE'
-    ? '<span class="badge badge-fail">POTENTIAL NON-COMPLIANCE</span>'
-    : '<span class="badge badge-review">REVIEW REQUIRED</span>';
+  // Final status badge
+  const statusMap = {
+    'PASS': { cls: 'badge-pass', label: 'PASS' },
+    'POTENTIAL_NON_COMPLIANCE': { cls: 'badge-fail', label: 'POTENTIAL NON-COMPLIANCE' },
+    'REVIEW': { cls: 'badge-review', label: 'REVIEW REQUIRED' },
+    'NOT_APPLICABLE': { cls: 'badge-na', label: 'NOT APPLICABLE' },
+    'COMPLIANT': { cls: 'badge-pass', label: 'COMPLIANT' },
+  };
+  const st = statusMap[data.finalStatus] || { cls: 'badge-review', label: data.finalStatus || 'UNKNOWN' };
+
+  // Meta row
+  const metaItems = [
+    `<span><b>Version</b> ${escHtml(data.ruleVersion || '')}</span>`,
+    `<span><b>Date</b> ${new Date(data.inspectionDate || Date.now()).toLocaleString()}</span>`,
+    `<span><b>Product</b> ${escHtml(data.product?.category || 'unknown')}${data.product?.isFood ? ' (food)' : ''}</span>`,
+    `<span><b>Package</b> ${escHtml(data.packageType?.type || 'unknown')}</span>`,
+  ];
+  if (!data.applicability?.chapterTwoApplies) {
+    metaItems.push(`<span class="warn">⚠ Chapter II does not apply: ${escHtml(data.applicability?.reason || '')}</span>`);
+  }
+  if (data.exemption?.isExempt) {
+    metaItems.push(`<span class="warn">⚠ Exempt: ${escHtml(data.exemption?.reason || '')}</span>`);
+  }
 
   panel.innerHTML = `
     <div class="compliance-card">
       <div class="compliance-header">
-        <h2>⚖ Compliance Analysis ${statusBadge}</h2>
-        <div class="compliance-meta">
-          <span><b>Version</b> ${data.ruleVersion}</span>
-          <span><b>Date</b> ${new Date(data.inspectionDate).toLocaleString()}</span>
-          <span><b>Product</b> ${data.product?.category || 'unknown'}${data.product?.isFood ? ' (food)' : ''}</span>
-          <span><b>Package</b> ${data.packageType?.type || 'unknown'}</span>
-          ${!data.applicability?.chapterTwoApplies ? '<span style="color:#fb923c"><b>⚠ Chapter II does not apply</b></span>' : ''}
-          ${data.exemption?.isExempt ? '<span style="color:#fb923c"><b>⚠ Exempt under Rule 26</b></span>' : ''}
-        </div>
+        <h2>⚖ Compliance Analysis <span class="badge ${st.cls}">${st.label}</span></h2>
+        <div class="compliance-meta">${metaItems.join('')}</div>
       </div>
       <div class="compliance-body">
         ${renderComplianceSummary(data)}
+        ${renderImageCoverage(data.imageCoverage)}
+        ${renderExtractedFields(data)}
         ${renderDeclarationsTable(data.declarations)}
-        ${renderFindings(data.findings, data.evidence)}
+        ${renderFindingsWithWhy(data.findings)}
         ${renderEvidenceCrops(data.evidence)}
-        ${renderRuleResults(data.ruleResults)}
+        ${renderGroupedRules(data.groupedRules)}
+        ${renderRuleResultsByPhase(data.ruleResults)}
       </div>
     </div>
   `;
 
-  // Scroll to compliance panel
   panel.scrollIntoView({ behavior: 'smooth' });
 
   // Generate evidence crops after DOM is ready
   if (data.evidence?.records?.length) {
-    generateEvidenceCrops(data.evidence.records, panel);
+    setTimeout(() => generateEvidenceCrops(data.evidence.records), 50);
   }
 }
 
 function renderComplianceSummary(data) {
-  const s = data.summary;
+  const s = data.summary || {};
   return `
     <div class="summary-row">
-      <div class="summary-cell cell-pass"><div class="num">${s.pass}</div><div class="lbl">Pass</div></div>
-      <div class="summary-cell cell-fail"><div class="num">${s.fail}</div><div class="lbl">Fail</div></div>
-      <div class="summary-cell cell-review"><div class="num">${s.review}</div><div class="lbl">Review</div></div>
-      <div class="summary-cell cell-na"><div class="num">${s.notApplicable}</div><div class="lbl">N/A</div></div>
+      <div class="summary-cell cell-pass"><div class="num">${s.compliant || 0}</div><div class="lbl">Pass</div></div>
+      <div class="summary-cell cell-fail"><div class="num">${s.nonCompliant || 0}</div><div class="lbl">Fail</div></div>
+      <div class="summary-cell cell-review"><div class="num">${s.review || 0}</div><div class="lbl">Review</div></div>
+      <div class="summary-cell cell-na"><div class="num">${s.notApplicable || 0}</div><div class="lbl">N/A</div></div>
     </div>
     <div class="classify-row">
-      <div class="classify-chip"><strong>Product:</strong> ${data.product?.category || '?'} ${data.product?.confidence ? `(${(data.product.confidence*100).toFixed(0)}%)` : ''}</div>
-      <div class="classify-chip"><strong>Package:</strong> ${data.packageType?.type || '?'} ${data.packageType?.confidence ? `(${(data.packageType.confidence*100).toFixed(0)}%)` : ''}</div>
-      <div class="classify-chip"><strong>Food:</strong> ${data.product?.isFood ? 'Yes' : 'No'}</div>
-    </div>
-  `;
+      <div class="classify-chip"><strong>Product:</strong> ${escHtml(data.product?.category || '?')}
+        ${data.product?.confidence ? ` (${(data.product.confidence*100).toFixed(0)}%)` : ''}
+        ${data.product?.isFoodSupplement ? ' · supplement' : ''}
+        ${data.product?.isFood ? ' · food' : ''}
+      </div>
+      <div class="classify-chip"><strong>Package:</strong> ${escHtml(data.packageType?.type || '?')}
+        ${data.packageType?.confidence ? ` (${(data.packageType.confidence*100).toFixed(0)}%)` : ''}
+      </div>
+    </div>`;
+}
+
+function renderImageCoverage(coverage) {
+  if (!coverage) return '';
+  const surfIcons = { FRONT: '📦', BACK: '📄', LEFT: '◀', RIGHT: '▶', TOP: '▲', BOTTOM: '▼', UNKNOWN: '?' };
+  let chips = (coverage.surfaces || []).map(s =>
+    `<div class="coverage-chip">
+      <div class="surf">${surfIcons[s.surface] || '?'}</div>
+      <div class="lbl">${escHtml(s.surface)}</div>
+      <div class="lbl">${s.detectionCount || 0} detections</div>
+    </div>`
+  ).join('');
+  let warning = '';
+  if (coverage.warning) {
+    warning = `<div class="coverage-warning">⚠ ${escHtml(coverage.warning)}</div>`;
+  }
+  return `
+    <div class="section-hdr">📷 Image Coverage — ${escHtml(coverage.surfacesCaptured || '')}</div>
+    <div class="coverage-grid">${chips}</div>
+    ${warning}`;
+}
+
+function renderExtractedFields(data) {
+  // Build fields from the declarations + evidence
+  const decls = data.declarations || {};
+  const fieldMap = [
+    { key: 'manufacturer', label: 'Manufacturer / Packer / Importer', value: decls.manufacturer?.value },
+    { key: 'productName', label: 'Product Name', value: decls.productName?.value },
+    { key: 'netQuantity', label: 'Net Quantity', value: decls.netQuantity?.value ? formatNetQuantity(decls.netQuantity.value) : null },
+    { key: 'date', label: 'Manufacturing / Packing Date', value: decls.date?.value },
+    { key: 'mrp', label: 'MRP', value: decls.mrp?.value },
+    { key: 'consumerCare', label: 'Consumer Care', value: decls.consumerCare?.value },
+  ];
+
+  let cards = fieldMap.map(f => {
+    const decl = decls[f.key] || {};
+    const status = decl.status || 'REVIEW';
+    const statusCls = status === 'PASS' ? 'f-detected' : status === 'REVIEW' ? 'f-review' : 'f-na';
+    const badgeCls = status === 'PASS' ? 'status-detected' : status === 'REVIEW' ? 'status-review' : 'status-na';
+    const displayValue = f.value ? escHtml(String(f.value)) : '<span style="color:#64748b">—</span>';
+
+    return `
+      <div class="field-card ${statusCls}">
+        <div class="field-label">${escHtml(f.label)}</div>
+        <div class="field-value">${displayValue}</div>
+        <div class="field-meta">
+          <span class="field-status-badge ${badgeCls}">${status}</span>
+          ${decl.confidence ? `<span>${(decl.confidence*100).toFixed(0)}%</span>` : ''}
+          ${decl.reason ? `<span style="color:#64748b">${escHtml(String(decl.reason).substring(0, 60))}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="section-hdr">🔎 Extracted Fields</div>
+    <div class="fields-grid">${cards}</div>`;
+}
+
+function formatNetQuantity(val) {
+  if (!val) return null;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    if (val.normalizedValue) {
+      return `${val.normalizedValue.value} ${val.normalizedValue.unit || ''}`;
+    }
+    return JSON.stringify(val);
+  }
+  return String(val);
 }
 
 function renderDeclarationsTable(declarations) {
   if (!declarations || Object.keys(declarations).length === 0) return '';
   const fields = [
-    { key: 'manufacturer', label: 'Manufacturer/Packer/Importer' },
+    { key: 'manufacturer', label: 'Manufacturer / Packer / Importer' },
     { key: 'productName', label: 'Product Name' },
     { key: 'netQuantity', label: 'Net Quantity' },
-    { key: 'date', label: 'Mfg/Packing Date' },
+    { key: 'date', label: 'Mfg / Packing Date' },
     { key: 'mrp', label: 'MRP' },
     { key: 'consumerCare', label: 'Consumer Care' },
   ];
   let rows = '';
   for (const [key, decl] of Object.entries(declarations)) {
-    const f = fields.find(f => f.key === key) || { label: key };
+    const f = fields.find(x => x.key === key) || { label: key };
     const statusClass = decl.status === 'PASS' ? 'decl-pass'
       : decl.status === 'FAIL' ? 'decl-fail'
       : decl.status === 'REVIEW' ? 'decl-review' : 'decl-na';
+    const displayVal = decl.value ? escHtml(String(decl.value)) : '—';
     rows += `
       <tr>
         <td>${escHtml(f.label)}</td>
-        <td>${escHtml(String(decl.value || '—'))}</td>
-        <td class="status-cell"><span class="${statusClass}">${decl.status}</span></td>
-        <td style="color:#64748b;font-size:0.75rem">${decl.reason || ''}</td>
+        <td>${displayVal}</td>
+        <td class="status-cell"><span class="${statusClass}">${decl.status || '—'}</span></td>
+        <td style="color:#64748b;font-size:0.75rem;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(String(decl.reason || ''))}</td>
       </tr>`;
   }
   return `
@@ -476,24 +666,51 @@ function renderDeclarationsTable(declarations) {
     </table>`;
 }
 
-function renderFindings(findings, evidence) {
+function renderFindingsWithWhy(findings) {
   if (!findings || findings.length === 0) return '';
-  const severityClass = { HIGH: 'sev-high', MEDIUM: 'sev-medium', LOW: 'sev-low', INFO: 'sev-info' };
-  let items = findings.map(f => {
+  const items = findings.map((f, i) => {
     const sevClass = f.status === 'FAIL' ? 'sev-high' : f.status === 'REVIEW' ? 'sev-medium' : 'sev-low';
     const statusBadge = f.status === 'FAIL' ? 'decl-fail' : f.status === 'REVIEW' ? 'decl-review' : 'decl-pass';
+    const why = f.whyResult || {};
+
+    const detectedEv = why.detectedEvidence ? escHtml(String(why.detectedEvidence)) : '—';
+    const expected   = why.expectedCondition ? escHtml(String(why.expectedCondition)) : '—';
+    const reason     = why.reason ? escHtml(String(why.reason)) : '—';
+    const action     = why.recommendedAction ? escHtml(String(why.recommendedAction)) : '—';
+
+    const statusColorCls = f.status === 'PASS' ? 'status-pass' : f.status === 'FAIL' ? 'status-fail' : 'status-review';
+
     return `
       <div class="finding-item ${sevClass}">
         <div class="finding-header">
-          <span class="finding-rule">${escHtml(f.ruleId || '')}</span>
-          <span class="finding-status ${statusBadge}">${f.status}</span>
+          <span class="finding-rule">${escHtml(f.ruleId || '')} · <strong>${escHtml(f.field || '—')}</strong></span>
+          <span class="finding-status ${statusBadge}">${f.status || '—'}</span>
         </div>
-        <div class="finding-detail">
-          <strong>${escHtml(f.field || '—')}</strong>
-          ${f.detectedText ? ` — "${escHtml(String(f.detectedText))}"` : ''}
-          ${f.expected ? `<br>Expected: ${escHtml(f.expected)}` : ''}
+        ${f.detectedText ? `<div class="finding-detail">Detected: "${escHtml(String(f.detectedText))}"</div>` : ''}
+
+        <div class="why-panel">
+          <div class="why-row">
+            <div class="why-key">Detected</div>
+            <div class="why-val ${f.status === 'PASS' ? 'success' : f.status === 'FAIL' ? 'fail' : 'warn'}">${detectedEv}</div>
+          </div>
+          <div class="why-row">
+            <div class="why-key">Expected</div>
+            <div class="why-val">${expected}</div>
+          </div>
+          <div class="why-row">
+            <div class="why-key">Reason</div>
+            <div class="why-val warn">${reason}</div>
+          </div>
+          <div class="why-row">
+            <div class="why-key">Action</div>
+            <div class="why-val">${action}</div>
+          </div>
+          ${f.confidence > 0 ? `
+          <div class="why-row">
+            <div class="why-key">Confidence</div>
+            <div class="why-val">${(f.confidence * 100).toFixed(0)}%</div>
+          </div>` : ''}
         </div>
-        ${f.confidence > 0 ? `<div class="finding-reason">Confidence: ${(f.confidence*100).toFixed(0)}%</div>` : ''}
       </div>`;
   }).join('');
   return `<div class="section-hdr">🔍 Findings (${findings.length})</div>${items}`;
@@ -501,105 +718,150 @@ function renderFindings(findings, evidence) {
 
 function renderEvidenceCrops(evidence) {
   if (!evidence?.records?.length) return '';
-  return `<div class="section-hdr">📷 Evidence Crops — <span style="font-size:0.7rem">Hover crops to see detection</span></div>
+  return `
+    <div class="section-hdr">📷 Evidence Crops — <span style="font-size:0.7rem;font-weight:400;text-transform:none;letter-spacing:0">tight bounding-box crops from original image</span></div>
     <div class="evidence-grid" id="evidence-grid">
       ${evidence.records.map((r, i) => `
         <div class="evidence-crop" id="ecrop-${i}">
           <canvas id="ecanvas-${i}"></canvas>
           <div class="evidence-crop-info">
-            <strong>${escHtml(r.field || '?')}</strong> — ${r.status}
-            ${r.sourceText ? `<br>${escHtml(r.sourceText.substring(0, 30))}` : ''}
+            <strong>${escHtml(r.field || '?')}</strong>
+            <span class="${r.status === 'DETECTED' ? 'status-pass' : 'status-review'}">${r.status || ''}</span>
+            ${r.sourceText ? `<div style="margin-top:2px">${escHtml(String(r.sourceText).substring(0, 40))}</div>` : ''}
           </div>
         </div>`).join('')}
     </div>`;
 }
 
-function generateEvidenceCrops(records, panel) {
-  // Find all image canvases in results
-  const imageCanvases = document.querySelectorAll('.canvas-panel canvas');
+function generateEvidenceCrops(records) {
+  // imageCanvases holds references to the OCR result canvases
   if (imageCanvases.length === 0) return;
 
   records.forEach((rec, i) => {
     const canvas = document.getElementById(`ecanvas-${i}`);
     if (!canvas) return;
 
-    const sourceCanvas = imageCanvases[0]; // use first image as source
-    const ctx = canvas.getContext('2d');
+    // Find source canvas for this record's imageId
+    const sourceCanvas = imageCanvases.find(c => c.imageId === rec.imageId) || imageCanvases[0];
+    const srcCanvas = sourceCanvas?.canvas;
+    if (!srcCanvas) return;
 
-    const region = rec.cropRegion || { x: 0, y: 0, width: 200, height: 160 };
-    canvas.width = region.width;
-    canvas.height = region.height;
+    const ctx = canvas.getContext('2d');
+    const region = rec.cropRegion || { x: 0, y: 0, width: 180, height: 140 };
+    canvas.width = region.width || 180;
+    canvas.height = region.height || 140;
 
     try {
+      // Tight crop from original image
       ctx.drawImage(
-        sourceCanvas,
-        region.x, region.y, region.width, region.height,
+        srcCanvas,
+        region.x || 0, region.y || 0, region.width || 180, region.height || 140,
         0, 0, canvas.width, canvas.height
       );
     } catch (e) {
-      // Canvas cross-origin error or missing image — draw placeholder
       ctx.fillStyle = '#1e2736';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#64748b';
-      ctx.font = '12px monospace';
-      ctx.fillText('Image unavailable', 8, 20);
+      ctx.font = '11px monospace';
+      ctx.fillText('Crop unavailable', 8, 20);
     }
   });
 }
 
-function renderRuleResults(ruleResults) {
+function renderGroupedRules(groupedRules) {
+  if (!groupedRules || groupedRules.length === 0) return '';
+  let html = `<div class="section-hdr">⚙ Grouped Rules — Require Inspector Verification</div>`;
+  groupedRules.forEach(group => {
+    const ruleItems = group.rules.map(r => `
+      <div class="grouped-rule-item">
+        <div>
+          <span class="rule-title">${escHtml(r.title || '')}</span>
+          <span class="rule-ref">${escHtml(r.ruleId || '')}</span>
+        </div>
+        <span class="decl-review">REVIEW</span>
+      </div>`).join('');
+    html += `
+      <div class="grouped-rules-card">
+        <div class="grouped-rules-header">
+          <h4>${escHtml(group.category || '')}</h4>
+          <span class="decl-review">REVIEW</span>
+        </div>
+        <div class="grouped-rules-body">
+          <div class="grouped-rules-desc">${escHtml(group.description || '')}</div>
+          <div class="grouped-rules-list">${ruleItems}</div>
+        </div>
+      </div>`;
+  });
+  return html;
+}
+
+function renderRuleResultsByPhase(ruleResults) {
   if (!ruleResults || ruleResults.length === 0) return '';
-  const phases = { 1: 'Phase 1 — Image', 2: 'Phase 2 — Product', 3: 'Phase 3 — Physical', 4: 'Phase 4 — Registry' };
+
+  // Phase detection from ruleId
+  const getPhase = (r) => {
+    const id = r.ruleId || '';
+    if (id.startsWith('PCR_R5') || id.startsWith('PCR_R6') || id.startsWith('PCR_R7') || id.startsWith('PCR_R8') || id.startsWith('PCR_R9') || id.startsWith('PCR_R10') || id.startsWith('PCR_R11') || id.startsWith('PCR_R12') || id.startsWith('PCR_R13')) return 1;
+    if (id.startsWith('PCR_2SCH') || id.startsWith('PCR_4SCH')) return 2;
+    if (id.startsWith('PCR_R14') || id.startsWith('PCR_R15') || id.startsWith('PCR_R16') || id.startsWith('PCR_R17')) return 2;
+    if (id.includes('SCH') && ['PCR_5SCH', 'PCR_6SCH', 'PCR_7SCH', 'PCR_1SCH'].some(p => id.startsWith(p))) return 3;
+    if (id.startsWith('PCR_R19') || id.startsWith('PCR_R20') || id.startsWith('PCR_R21') || id.startsWith('PCR_R22')) return 3;
+    if (id.startsWith('PCR_R27') || id.startsWith('PCR_R28') || id.startsWith('PCR_R29') || id.startsWith('PCR_R30')) return 4;
+    return 1;
+  };
+
+  const phases = { 1: 'Phase 1 — Mandatory Declarations (Rule 6-13)', 2: 'Phase 2 — Product-Aware Rules (Rule 5, Schedules)', 3: 'Phase 3 — Physical Inspection (REVIEW)', 4: 'Phase 4 — Enforcement & Registry (REVIEW)' };
   const phaseMap = {};
   ruleResults.forEach(r => {
-    // Infer phase from ruleId prefix
-    let phase = 1;
-    if (r.ruleId?.startsWith('PCR_R5') || r.ruleId?.startsWith('PCR_R6_0') || r.ruleId?.startsWith('PCR_R14') || r.ruleId?.startsWith('PCR_R15') || r.ruleId?.startsWith('PCR_R16') || r.ruleId?.startsWith('PCR_R17')) phase = 2;
-    if (r.ruleId?.includes('SCH') && ['PCR_2SCH', 'PCR_4SCH'].some(p => r.ruleId?.startsWith(p))) phase = 2;
-    if (r.ruleId?.includes('SCH') && ['PCR_5SCH', 'PCR_6SCH', 'PCR_7SCH', 'PCR_1SCH'].some(p => r.ruleId?.startsWith(p))) phase = 3;
-    if (r.ruleId?.startsWith('PCR_R19') || r.ruleId?.startsWith('PCR_R2')) phase = 3;
-    if (r.ruleId?.startsWith('PCR_R20') || r.ruleId?.startsWith('PCR_R27') || r.ruleId?.startsWith('PCR_R28') || r.ruleId?.startsWith('PCR_R29') || r.ruleId?.startsWith('PCR_R30')) phase = 4;
-    if (!phaseMap[phase]) phaseMap[phase] = [];
-    phaseMap[phase].push(r);
+    const p = getPhase(r);
+    if (!phaseMap[p]) phaseMap[p] = [];
+    phaseMap[p].push(r);
   });
 
   let html = '';
   for (const [phase, rules] of Object.entries(phaseMap)) {
     const phaseName = phases[phase] || `Phase ${phase}`;
-    html += `<div class="section-hdr">${phaseName}</div>`;
+    const phaseIcon = phase === '1' ? '📝' : phase === '2' ? '🏷' : phase === '3' ? '📏' : '🔍';
+    html += `<div class="section-hdr">${phaseIcon} ${phaseName}</div>`;
     rules.forEach(r => {
-      const statusClass = r.status === 'PASS' ? 'decl-pass' : r.status === 'FAIL' ? 'decl-fail' : r.status === 'REVIEW' ? 'decl-review' : 'decl-na';
+      const statusCls = r.status === 'PASS' ? 'decl-pass' : r.status === 'FAIL' ? 'decl-fail' : r.status === 'REVIEW' ? 'decl-review' : 'decl-na';
+      const leftColor = r.status === 'PASS' ? '#4ade80' : r.status === 'FAIL' ? '#f87171' : '#fb923c';
+      const reason = r.reason ? escHtml(String(r.reason).substring(0, 120)) : '';
       html += `
-        <div style="margin-bottom:8px;padding:10px;background:#0f1117;border-radius:6px;border-left:3px solid ${r.status==='PASS'?'#4ade80':r.status==='FAIL'?'#f87171':'#fb923c'}">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:0.8rem;color:#94a3b8">${escHtml(r.ruleId || '')}</span>
-            <span class="${statusClass}">${r.status}</span>
+        <div style="margin-bottom:8px;padding:10px;background:#0f1117;border-radius:6px;border-left:3px solid ${leftColor}">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:4px">
+            <span style="font-size:0.78rem;color:#64748b;font-family:monospace">${escHtml(r.ruleId || '')}</span>
+            <span class="${statusCls}">${r.status || '—'}</span>
           </div>
           <div style="font-size:0.85rem;color:#e2e8f0;margin-top:4px">${escHtml(r.title || '')}</div>
-          <div style="font-size:0.75rem;color:#64748b;margin-top:2px">${escHtml(r.reason || '')}</div>
+          ${reason ? `<div style="font-size:0.72rem;color:#64748b;margin-top:2px;line-height:1.4">${reason}</div>` : ''}
         </div>`;
     });
   }
   return html;
 }
 
-// ---- Render results ----
+// ── OCR Results Renderer ──────────────────────────────────────────────────────
+
 function renderResults(results, files) {
   const container = document.getElementById('results');
   container.innerHTML = '';
+  const canvases = [];
 
   results.forEach((result, idx) => {
     if (result.error && !result.detections?.length) {
       container.appendChild(makeErrorCard(result.imageId, result.error));
       return;
     }
-
-    const card = makeImageCard(result, files[idx]);
-    container.appendChild(card);
+    const cardData = makeImageCard(result, files[idx], idx);
+    container.appendChild(cardData.card);
+    if (cardData.canvas) canvases.push({ imageId: result.imageId, canvas: cardData.canvas });
   });
+
+  return canvases;
 }
 
-function makeImageCard(result, file) {
+function makeImageCard(result, file, idx) {
   const card = document.createElement('div');
   card.className = 'image-card';
 
@@ -607,28 +869,25 @@ function makeImageCard(result, file) {
   const hdr = document.createElement('div');
   hdr.className = 'image-card-header';
   hdr.innerHTML = `
-    <h2>📄 ${result.imageId}</h2>
+    <h2>📄 ${escHtml(result.imageId || '')}</h2>
     <div class="meta-row">
-      <span><b>Size</b> ${result.width}×${result.height}px</span>
-      <span><b>Time</b> ${result.processingTimeMs}ms</span>
-      <span><b>Detections</b> ${result.detections.length}</span>
-      <span><b>Pre-processing</b> ${(result.preprocessingSteps || []).join(', ') || 'none'}</span>
+      <span><b>Size</b> ${result.width || 0}×${result.height || 0}px</span>
+      <span><b>Time</b> ${result.processingTimeMs || 0}ms</span>
+      <span><b>Detections</b> ${result.detections?.length || 0}</span>
     </div>`;
   card.appendChild(hdr);
 
-  // Body (canvas + detections)
+  // Body
   const body = document.createElement('div');
   body.className = 'image-card-body';
 
-  // Canvas panel
   const canvasPanel = document.createElement('div');
   canvasPanel.className = 'canvas-panel';
   const canvas = document.createElement('canvas');
   canvasPanel.appendChild(canvas);
   body.appendChild(canvasPanel);
 
-  // Detections panel
-  const detPanel = makeDetectionsPanel(result.detections, canvas);
+  const detPanel = makeDetectionsPanel(result.detections || [], canvas);
   body.appendChild(detPanel);
   card.appendChild(body);
 
@@ -636,7 +895,7 @@ function makeImageCard(result, file) {
   const jsonPanel = makeJsonPanel(result);
   card.appendChild(jsonPanel);
 
-  // Draw image + boxes on canvas
+  // Draw image + boxes
   if (file) {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -645,13 +904,15 @@ function makeImageCard(result, file) {
       canvas.height = img.naturalHeight;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      drawBoxes(ctx, result.detections);
+      drawBoxes(ctx, result.detections || []);
+      // Save snapshot for hover
+      canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
     };
     img.src = url;
   }
 
-  return card;
+  return { card, canvas };
 }
 
 function makeDetectionsPanel(detections, canvas) {
@@ -666,17 +927,30 @@ function makeDetectionsPanel(detections, canvas) {
     const pct = Math.round(det.confidence * 100);
     const cls = pct >= 80 ? 'conf-high' : pct >= 50 ? 'conf-mid' : 'conf-low';
 
+    const text = det.text || '';
+    const rawText = det.rawText || '';
+
     row.innerHTML = `
       <span class="conf-badge ${cls}">${pct}%</span>
       <div>
-        <div class="det-text">${escHtml(det.text)}</div>
-        ${det.rawText !== det.text ? `<div class="det-raw">raw: ${escHtml(det.rawText)}</div>` : ''}
+        <div class="det-text">${escHtml(text)}</div>
+        ${rawText !== text ? `<div class="det-raw">raw: ${escHtml(rawText)}</div>` : ''}
         ${det.belowThreshold ? '<div class="det-raw" style="color:#f87171">⚠ below threshold</div>' : ''}
       </div>`;
 
-    // Hover: highlight box on canvas
-    row.addEventListener('mouseenter', () => highlightBox(canvas, detections, i));
-    row.addEventListener('mouseleave', () => highlightBox(canvas, detections, -1));
+    row.addEventListener('mouseenter', () => {
+      if (canvas._snapshot) {
+        const ctx = canvas.getContext('2d');
+        ctx.putImageData(canvas._snapshot, 0, 0);
+        drawBoxes(ctx, detections, i);
+      }
+    });
+    row.addEventListener('mouseleave', () => {
+      if (canvas._snapshot) {
+        const ctx = canvas.getContext('2d');
+        ctx.putImageData(canvas._snapshot, 0, 0);
+      }
+    });
 
     panel.appendChild(row);
   });
@@ -715,11 +989,12 @@ function makeJsonPanel(result) {
 function makeErrorCard(imageId, error) {
   const div = document.createElement('div');
   div.className = 'error-card';
-  div.innerHTML = `<h2>❌ ${escHtml(imageId)}</h2><p>${escHtml(error)}</p>`;
+  div.innerHTML = `<h2>❌ ${escHtml(String(imageId || 'Error'))}</h2><p>${escHtml(String(error || ''))}</p>`;
   return div;
 }
 
-// ---- Canvas drawing ----
+// ── Canvas drawing ────────────────────────────────────────────────────────────
+
 const COLORS = ['#60a5fa','#34d399','#f472b6','#fb923c','#a78bfa','#fbbf24','#38bdf8'];
 
 function drawBoxes(ctx, detections, highlightIdx = -1) {
@@ -729,8 +1004,8 @@ function drawBoxes(ctx, detections, highlightIdx = -1) {
 
     const isHL = i === highlightIdx;
     ctx.strokeStyle = isHL ? '#fbbf24' : COLORS[i % COLORS.length];
-    ctx.lineWidth = isHL ? 4 : 2;
-    ctx.globalAlpha = det.belowThreshold ? 0.5 : 1;
+    ctx.lineWidth = isHL ? 3 : 2;
+    ctx.globalAlpha = det.belowThreshold ? 0.4 : 1;
 
     ctx.beginPath();
     ctx.moveTo(pts[0][0], pts[0][1]);
@@ -738,39 +1013,27 @@ function drawBoxes(ctx, detections, highlightIdx = -1) {
     ctx.closePath();
     ctx.stroke();
 
-    // Semi-transparent fill on highlight
     if (isHL) {
-      ctx.fillStyle = 'rgba(251,191,36,0.15)';
+      ctx.fillStyle = 'rgba(251,191,36,0.12)';
       ctx.fill();
+      // Label
+      const cx = (pts[0][0] + pts[2][0]) / 2;
+      const cy = (pts[0][1] + pts[2][1]) / 2;
+      ctx.fillStyle = 'rgba(251,191,36,0.9)';
+      ctx.font = 'bold 11px monospace';
+      const label = (det.text || '').substring(0, 20);
+      ctx.fillText(label, cx, cy);
     }
   });
   ctx.globalAlpha = 1;
 }
 
-function highlightBox(canvas, detections, idx) {
-  const ctx = canvas.getContext('2d');
-  // Redraw image – we stored the image in a data attribute approach.
-  // Simpler: just redraw boxes with the highlight
-  const snapshot = canvas._snapshot;
-  if (!snapshot) return;
-  ctx.putImageData(snapshot, 0, 0);
-  drawBoxes(ctx, detections, idx);
-}
+// ── Utilities ─────────────────────────────────────────────────────────────────
 
-// After drawing, save snapshot so hover-redraw can restore the base.
-function saveSnapshot(canvas) {
-  const ctx = canvas.getContext('2d');
-  canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-}
-
-// Patch drawBoxes call to save snapshot first
-const _origDrawBoxes = drawBoxes;
-// We'll save snapshot after the image.onload draws the image and calls drawBoxes.
-
-// ---- Utilities ----
 function setLoading(on) {
   document.getElementById('spinner').style.display = on ? 'block' : 'none';
   document.getElementById('run-btn').disabled = on;
+  document.getElementById('compliance-btn').disabled = on;
 }
 
 function setStatus(msg) {
@@ -780,13 +1043,16 @@ function setStatus(msg) {
 function showError(msg) {
   const container = document.getElementById('results');
   container.innerHTML = '';
-  container.appendChild(makeErrorCard('Error', msg));
+  container.appendChild(makeErrorCard('Error', String(msg)));
   setStatus('Failed');
+  setLoading(false);
 }
 
 function clearAll() {
   selectedFiles = [];
   lastOcrResults = null;
+  lastComplianceData = null;
+  imageCanvases = [];
   document.getElementById('file-input').value = '';
   document.getElementById('file-list').textContent = '';
   document.getElementById('run-btn').disabled = true;
@@ -798,25 +1064,13 @@ function clearAll() {
 }
 
 function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  if (typeof str !== 'string') str = String(str);
+  if (str === '[object Object]' || (typeof str === 'object' && str !== null)) return '—';
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
 }
-
-// Save canvas snapshot after image load + box draw so hover works
-document.addEventListener('DOMContentLoaded', () => {
-  const _orig = Image.prototype;
-  // observe canvas redraws via MutationObserver on results
-  const obs = new MutationObserver(() => {
-    document.querySelectorAll('.canvas-panel canvas').forEach(c => {
-      if (!c._snapshot && c.width > 0) {
-        const ctx = c.getContext('2d');
-        c._snapshot = ctx.getImageData(0, 0, c.width, c.height);
-      }
-    });
-  });
-  obs.observe(document.getElementById('results'), { childList: true, subtree: true });
-});
 </script>
 </body>
 </html>

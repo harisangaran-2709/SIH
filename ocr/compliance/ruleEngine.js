@@ -3,32 +3,37 @@
  * -------------------------
  * Legal Metrology rule validation engine
  * Validates extracted fields against 2011-baseline rules
+ *
+ * Critical semantics:
+ *   - NOT_DETECTED (field absent from all surfaces) → REVIEW
+ *   - NOT_VISIBLE (single-surface photo, field not on this surface) → REVIEW
+ *   - AMBIGUOUS / LOW_CONFIDENCE → REVIEW
+ *   - DETECTED → evaluate rule (PASS/FAIL/REVIEW)
+ *   - Phase 3/4 rules (physical/enforcement) → always REVIEW, grouped into single cards
+ *   - Never auto-FAIL for missing evidence; inspector verifies
  */
 
 const { RuleDatabase } = require('./ruleDatabase');
 
-/**
- * Rule engine class
- */
 class RuleEngine {
   constructor() {
     this.ruleDb = new RuleDatabase();
   }
 
   /**
-   * Run Phase 1 compliance checks only (image-verifiable, no calibration)
-   * @param {Object} fields - Extracted fields
+   * Run Phase 1 compliance checks
+   * @param {Object} fields - Extracted fields with status: DETECTED/NOT_DETECTED/NOT_VISIBLE/AMBIGUOUS/LOW_CONFIDENCE
    * @param {Object} product - Product classification
    * @param {Object} packageType - Package classification
    * @param {Array} detections - Original OCR detections
-   * @returns {Object} Compliance results
+   * @returns {Object} Compliance results with groupedRules for UI
    */
   runPhase1Checks(fields, product, packageType, detections) {
     const results = [];
     const findings = [];
     const declarations = {};
 
-    // Check mandatory declarations (Rule 6)
+    // Phase 1: Mandatory declarations (Rule 6)
     this.checkManufacturerPackerImporter(fields, results, declarations, findings);
     this.checkProductName(fields, results, declarations, findings);
     this.checkNetQuantity(fields, results, declarations, findings);
@@ -36,50 +41,65 @@ class RuleEngine {
     this.checkMRP(fields, results, declarations, findings);
     this.checkConsumerCare(fields, results, declarations, findings);
 
-    // Check visual/legibility (Rule 9)
+    // Visual/legibility (Rule 9)
     const visualChecks = this.checkVisualQuality(detections);
 
-    // Check quantity format (Rule 12)
+    // Quantity format (Rule 12)
     this.checkQuantityExpression(fields, results, findings);
 
-    // Check units (Rule 13)
+    // Units (Rule 13)
     this.checkUnits(fields, results, findings);
 
-    // Phase 2: Product-aware checks (Rule 5, Second Schedule, Rules 14-17, 24-26, Fourth Schedule)
+    // Phase 2: Product-aware checks (Rule 5, Second Schedule, Rules 14-17)
     this.checkManufacturerDifferentFromPacker(fields, results, declarations, findings);
     this.checkFoodDeclarations(fields, product, results, declarations, findings);
     this.checkCommoditySpecificRules(fields, product, results, findings);
 
-    // Phase 3: Physical inspection (Rules 19, 21-22) — always REVIEW without calibration
-    this.checkPhysicalInspectionRules(fields, results, findings);
+    // Phase 3 & 4: Physical/enforcement — ALWAYS REVIEW, grouped
+    const groupedRules = this.createGroupedPhysicalEnforcementChecks(fields, product);
 
-    // Phase 4: Enforcement/registry (Rules 27-30, 20) — always REVIEW, inspector verifies
-    this.checkEnforcementRegistryRules(fields, product, results, findings);
+    // Add grouped rules to results (for summary counts)
+    groupedRules.forEach(group => {
+      group.rules.forEach(rule => results.push(rule));
+    });
 
     return {
       ruleResults: results,
       findings,
       declarations,
       visualChecks,
+      groupedRules,
     };
   }
 
-  /**
-   * Check manufacturer/packer/importer (Rule 6.1)
-   */
+  // ── Phase 1: Mandatory Declarations ────────────────────────────────────────
+
   checkManufacturerPackerImporter(fields, results, declarations, findings) {
     const rule = this.ruleDb.getRule('PCR_R6_01');
     const manufacturer = fields.manufacturer;
     const packer = fields.packer;
     const importer = fields.importer;
 
-    // At least one must be present
     const hasAny = manufacturer?.status === 'DETECTED' ||
                    packer?.status === 'DETECTED' ||
                    importer?.status === 'DETECTED';
 
-    const detected = hasAny;
-    const status = hasAny ? 'PASS' : 'FAIL';
+    // Check if any is NOT_VISIBLE (single surface photo)
+    const anyNotVisible = [manufacturer, packer, importer].some(f => f?.status === 'NOT_VISIBLE');
+
+    let status = 'PASS';
+    let reason = 'At least one entity detected';
+
+    if (!hasAny) {
+      if (anyNotVisible) {
+        status = 'REVIEW';
+        reason = 'Manufacturer/Packer/Importer not visible on photographed surface. Inspector should verify all surfaces.';
+      } else {
+        status = 'REVIEW';
+        reason = 'No manufacturer/packer/importer detected. Inspector verification required.';
+      }
+    }
+
     const confidence = Math.max(
       manufacturer?.confidence || 0,
       packer?.confidence || 0,
@@ -89,12 +109,12 @@ class RuleEngine {
     declarations.manufacturer = {
       field: 'manufacturer',
       required: true,
-      detected,
+      detected: hasAny,
       value: manufacturer?.value || packer?.value || importer?.value || null,
       confidence,
       status,
       ruleId: 'PCR_R6_01',
-      reason: hasAny ? 'At least one entity detected' : 'No manufacturer/packer/importer detected',
+      reason,
     };
 
     results.push({
@@ -109,24 +129,28 @@ class RuleEngine {
       confidence,
       status,
       legalReference: rule.legal_reference,
-      reason: declarations.manufacturer.reason,
+      reason,
     });
 
-    if (!hasAny) {
-      findings.push(this.createFinding('PCR_R6_01', 'FAIL', 'manufacturer', null,
-        'Manufacturer/Packer/Importer name and address', confidence));
+    if (status === 'REVIEW') {
+      findings.push(this.createFinding('PCR_R6_01', 'REVIEW', 'manufacturer', null,
+        'Manufacturer/Packer/Importer name and address', confidence, reason));
     }
   }
 
-  /**
-   * Check product name (Rule 6.3)
-   */
   checkProductName(fields, results, declarations, findings) {
     const rule = this.ruleDb.getRule('PCR_R6_03');
     const productName = fields.productName;
 
     const detected = productName?.status === 'DETECTED';
-    const status = detected ? 'PASS' : 'FAIL';
+    let status = detected ? 'PASS' : 'REVIEW';
+    let reason = detected ? 'Product name detected' : 'Product name not detected — inspector verification required';
+
+    if (productName?.status === 'NOT_VISIBLE') {
+      status = 'REVIEW';
+      reason = 'Product name not visible on photographed surface';
+    }
+
     const confidence = productName?.confidence || 0;
 
     declarations.productName = {
@@ -137,7 +161,7 @@ class RuleEngine {
       confidence,
       status,
       ruleId: 'PCR_R6_03',
-      reason: detected ? 'Product name detected' : 'Product name not detected',
+      reason,
     };
 
     results.push({
@@ -152,24 +176,34 @@ class RuleEngine {
       confidence,
       status,
       legalReference: rule.legal_reference,
-      reason: declarations.productName.reason,
+      reason,
     });
 
-    if (!detected) {
-      findings.push(this.createFinding('PCR_R6_03', 'FAIL', 'productName', null,
-        'Common or generic name of commodity', confidence));
+    if (status === 'REVIEW') {
+      findings.push(this.createFinding('PCR_R6_03', 'REVIEW', 'productName', null,
+        'Common or generic name of commodity', confidence, reason));
     }
   }
 
-  /**
-   * Check net quantity (Rule 6.4)
-   */
   checkNetQuantity(fields, results, declarations, findings) {
     const rule = this.ruleDb.getRule('PCR_R6_04');
     const netQuantity = fields.netQuantity;
 
     const detected = netQuantity?.status === 'DETECTED';
-    const status = detected ? 'PASS' : 'FAIL';
+    let status = detected ? 'PASS' : 'REVIEW';
+    let reason = detected ? 'Net quantity detected' : 'Net quantity not detected — inspector verification required';
+
+    if (netQuantity?.status === 'NOT_VISIBLE') {
+      status = 'REVIEW';
+      reason = 'Net quantity not visible on photographed surface';
+    } else if (netQuantity?.status === 'AMBIGUOUS') {
+      status = 'REVIEW';
+      reason = 'Multiple quantity candidates detected — inspector should verify the correct net quantity declaration';
+    } else if (netQuantity?.status === 'LOW_CONFIDENCE') {
+      status = 'REVIEW';
+      reason = 'Low confidence extraction — inspector verification required';
+    }
+
     const confidence = netQuantity?.confidence || 0;
 
     declarations.netQuantity = {
@@ -180,7 +214,7 @@ class RuleEngine {
       confidence,
       status,
       ruleId: 'PCR_R6_04',
-      reason: detected ? 'Net quantity detected' : 'Net quantity not detected',
+      reason,
     };
 
     results.push({
@@ -195,25 +229,32 @@ class RuleEngine {
       confidence,
       status,
       legalReference: rule.legal_reference,
-      reason: declarations.netQuantity.reason,
+      reason,
     });
 
-    if (!detected) {
-      findings.push(this.createFinding('PCR_R6_04', 'FAIL', 'netQuantity', null,
-        'Net quantity in terms of weight, measure or number', confidence));
+    if (status === 'REVIEW') {
+      findings.push(this.createFinding('PCR_R6_04', 'REVIEW', 'netQuantity', netQuantity?.value,
+        'Net quantity in terms of weight, measure or number', confidence, reason));
     }
   }
 
-  /**
-   * Check manufacturing/packing date (Rule 6.5)
-   */
   checkManufacturingDate(fields, results, declarations, findings) {
     const rule = this.ruleDb.getRule('PCR_R6_05');
     const mfgDate = fields.mfgDate;
     const packingDate = fields.packingDate;
 
     const detected = mfgDate?.status === 'DETECTED' || packingDate?.status === 'DETECTED';
-    const status = detected ? 'PASS' : 'FAIL';
+    let status = detected ? 'PASS' : 'REVIEW';
+    let reason = detected ? 'Manufacturing/packing date detected' : 'No date detected — inspector verification required';
+
+    if (!detected && (mfgDate?.status === 'NOT_VISIBLE' || packingDate?.status === 'NOT_VISIBLE')) {
+      status = 'REVIEW';
+      reason = 'Date not visible on photographed surface';
+    } else if (!detected && (mfgDate?.status === 'AMBIGUOUS' || packingDate?.status === 'AMBIGUOUS')) {
+      status = 'REVIEW';
+      reason = 'Multiple date patterns detected — inspector should verify manufacturing/packing date';
+    }
+
     const confidence = Math.max(mfgDate?.confidence || 0, packingDate?.confidence || 0);
 
     declarations.date = {
@@ -224,7 +265,7 @@ class RuleEngine {
       confidence,
       status,
       ruleId: 'PCR_R6_05',
-      reason: detected ? 'Manufacturing/packing date detected' : 'No date detected',
+      reason,
     };
 
     results.push({
@@ -239,31 +280,36 @@ class RuleEngine {
       confidence,
       status,
       legalReference: rule.legal_reference,
-      reason: declarations.date.reason,
+      reason,
     });
 
-    if (!detected) {
-      findings.push(this.createFinding('PCR_R6_05', 'FAIL', 'date', null,
-        'Month and year of manufacture/packing/import', confidence));
+    if (status === 'REVIEW') {
+      findings.push(this.createFinding('PCR_R6_05', 'REVIEW', 'date', mfgDate?.value || packingDate?.value,
+        'Month and year of manufacture/packing/import', confidence, reason));
     }
   }
 
-  /**
-   * Check MRP (Rule 6.6)
-   */
   checkMRP(fields, results, declarations, findings) {
     const rule = this.ruleDb.getRule('PCR_R6_06');
     const mrp = fields.mrp;
 
     const detected = mrp?.status === 'DETECTED';
-    let status = 'PASS';
+    let status = detected ? 'PASS' : 'REVIEW';
+    let reason = detected ? 'MRP detected' : 'MRP not detected';
 
-    if (!detected) {
-      status = 'FAIL';
-    } else if (mrp.status === 'AMBIGUOUS') {
+    // NOT_VISIBLE is the critical case: single-surface photo, MRP on other side → REVIEW not FAIL
+    if (mrp?.status === 'NOT_VISIBLE') {
       status = 'REVIEW';
-    } else if (mrp.status === 'LOW_CONFIDENCE') {
+      reason = 'MRP not found on photographed surface. Inspector should photograph all sides and verify MRP is present.';
+    } else if (mrp?.status === 'AMBIGUOUS') {
       status = 'REVIEW';
+      reason = 'Multiple price values detected — inspector should verify the correct MRP declaration';
+    } else if (mrp?.status === 'LOW_CONFIDENCE') {
+      status = 'REVIEW';
+      reason = 'Low confidence MRP extraction — inspector verification required';
+    } else if (!detected) {
+      status = 'REVIEW';
+      reason = 'MRP not detected from OCR — inspector verification required';
     }
 
     const confidence = mrp?.confidence || 0;
@@ -276,7 +322,7 @@ class RuleEngine {
       confidence,
       status,
       ruleId: 'PCR_R6_06',
-      reason: detected ? 'MRP detected' : 'MRP not detected',
+      reason,
     };
 
     results.push({
@@ -291,27 +337,28 @@ class RuleEngine {
       confidence,
       status,
       legalReference: rule.legal_reference,
-      reason: declarations.mrp.reason,
+      reason,
     });
 
-    if (status === 'FAIL') {
-      findings.push(this.createFinding('PCR_R6_06', 'FAIL', 'mrp', null,
-        'Retail sale price (MRP) inclusive of all taxes', confidence));
-    } else if (status === 'REVIEW') {
+    if (status === 'REVIEW') {
       findings.push(this.createFinding('PCR_R6_06', 'REVIEW', 'mrp', mrp?.value,
-        'MRP detected but requires verification', confidence));
+        'Retail sale price (MRP) inclusive of all taxes', confidence, reason));
     }
   }
 
-  /**
-   * Check consumer care (Rule 6.10)
-   */
   checkConsumerCare(fields, results, declarations, findings) {
     const rule = this.ruleDb.getRule('PCR_R6_10');
     const consumerCare = fields.consumerCare;
 
     const detected = consumerCare?.status === 'DETECTED';
-    const status = detected ? 'PASS' : 'FAIL';
+    let status = detected ? 'PASS' : 'REVIEW';
+    let reason = detected ? 'Consumer care details detected' : 'Consumer care details not detected — inspector verification required';
+
+    if (consumerCare?.status === 'NOT_VISIBLE') {
+      status = 'REVIEW';
+      reason = 'Consumer care details not visible on photographed surface';
+    }
+
     const confidence = consumerCare?.confidence || 0;
 
     declarations.consumerCare = {
@@ -322,7 +369,7 @@ class RuleEngine {
       confidence,
       status,
       ruleId: 'PCR_R6_10',
-      reason: detected ? 'Consumer care details detected' : 'Consumer care details not detected',
+      reason,
     };
 
     results.push({
@@ -337,66 +384,57 @@ class RuleEngine {
       confidence,
       status,
       legalReference: rule.legal_reference,
-      reason: declarations.consumerCare.reason,
+      reason,
     });
 
-    if (!detected) {
-      findings.push(this.createFinding('PCR_R6_10', 'FAIL', 'consumerCare', null,
-        'Customer care contact details', confidence));
+    if (status === 'REVIEW') {
+      findings.push(this.createFinding('PCR_R6_10', 'REVIEW', 'consumerCare', consumerCare?.value,
+        'Customer care contact details', confidence, reason));
     }
   }
 
-  /**
-   * Check visual quality (Rule 9)
-   */
+  // ── Visual Quality (Rule 9) ────────────────────────────────────────────────
+
   checkVisualQuality(detections) {
     const visualChecks = {};
 
     // Legibility check (Rule 9.1) - based on OCR confidence
-    const avgConfidence = detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length;
+    const avgConfidence = detections.length > 0
+      ? detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length
+      : 0;
     const lowConfidenceCount = detections.filter(d => d.confidence < 0.75).length;
 
     visualChecks.legibility = {
       check: 'legibility',
-      status: avgConfidence >= 0.75 ? 'PASS' : lowConfidenceCount > 3 ? 'FAIL' : 'REVIEW',
+      status: avgConfidence >= 0.75 ? 'PASS' : lowConfidenceCount > 3 ? 'REVIEW' : 'REVIEW',
       details: `Average OCR confidence: ${(avgConfidence * 100).toFixed(1)}%, Low confidence detections: ${lowConfidenceCount}`,
       confidence: avgConfidence,
       ruleId: 'PCR_R9_01',
     };
 
-    // Contrast check (Rule 9.2) - placeholder (requires image analysis)
+    // Contrast check (Rule 9.2) - requires image analysis
     visualChecks.contrast = {
       check: 'contrast',
       status: 'REVIEW',
-      details: 'Contrast analysis requires image processing',
+      details: 'Contrast analysis requires image processing — inspector should verify declarations are clearly distinguishable from background',
       confidence: 0.5,
       ruleId: 'PCR_R9_02',
     };
 
-    // Principal display panel (Rule 7.1) - placeholder
+    // Principal display panel (Rule 7.1)
     visualChecks.principalDisplayPanel = {
       check: 'principalDisplayPanel',
       status: 'REVIEW',
-      details: 'Principal display panel identification requires layout analysis',
+      details: 'Principal display panel identification requires layout analysis — inspector verification required',
       confidence: 0.5,
       ruleId: 'PCR_R7_01',
-    };
-
-    // Font height (Rule 7.2, 7.4) - requires calibration
-    visualChecks.fontHeight = {
-      check: 'fontHeight',
-      status: 'REVIEW',
-      details: 'Font height measurement requires camera calibration',
-      confidence: 0,
-      ruleId: 'PCR_R7_02',
     };
 
     return visualChecks;
   }
 
-  /**
-   * Check quantity expression (Rule 12)
-   */
+  // ── Quantity Expression (Rule 12) ──────────────────────────────────────────
+
   checkQuantityExpression(fields, results, findings) {
     const rule = this.ruleDb.getRule('PCR_R12_01');
     const netQuantity = fields.netQuantity;
@@ -429,13 +467,12 @@ class RuleEngine {
 
     if (hasProhibited) {
       findings.push(this.createFinding('PCR_R12_01', 'FAIL', 'netQuantity', netQuantity.value,
-        'Quantity must not use approximation terms', confidence));
+        'Quantity must not use approximation terms', confidence, 'Prohibited terms detected: ' + prohibited.filter(t => text.includes(t)).join(', ')));
     }
   }
 
-  /**
-   * Check units (Rule 13)
-   */
+  // ── Units (Rule 13) ────────────────────────────────────────────────────────
+
   checkUnits(fields, results, findings) {
     const rule = this.ruleDb.getRule('PCR_R13_01');
     const netQuantity = fields.netQuantity;
@@ -482,13 +519,12 @@ class RuleEngine {
 
     if (status === 'FAIL') {
       findings.push(this.createFinding('PCR_R13_01', 'FAIL', 'netQuantity', netQuantity.value,
-        'Non-standard unit used', netQuantity.confidence));
+        'Non-standard unit used', netQuantity.confidence, reason));
     }
   }
 
-  /**
-   * Phase 2: Check if manufacturer differs from packer (Rule 5)
-   */
+  // ── Phase 2: Product-Aware Checks ──────────────────────────────────────────
+
   checkManufacturerDifferentFromPacker(fields, results, declarations, findings) {
     const rule = this.ruleDb.getRule('PCR_R5_01');
     if (!rule) return;
@@ -500,7 +536,6 @@ class RuleEngine {
     const different = hasBoth && manufacturer !== packer;
     const status = different ? 'REVIEW' : (hasBoth ? 'PASS' : 'NOT_APPLICABLE');
 
-    // If different, needs explicit declaration — but from image we can only see they exist
     declarations.manufacturerPackerDistinction = {
       field: 'manufacturer/packer',
       required: false,
@@ -510,8 +545,8 @@ class RuleEngine {
       status,
       ruleId: 'PCR_R5_01',
       reason: different
-        ? 'Manufacturer and packer appear different — verify declaration explicitly states both or one'
-        : (hasBoth ? 'Both present' : 'Only one present — rule 5 applies when different'),
+        ? 'Manufacturer and packer appear different — verify declaration explicitly states both'
+        : (hasBoth ? 'Both present and same' : 'Only one present'),
     };
 
     results.push({
@@ -530,27 +565,23 @@ class RuleEngine {
     });
   }
 
-  /**
-   * Phase 2: Food declarations (Second Schedule)
-   */
   checkFoodDeclarations(fields, product, results, declarations, findings) {
     const isFood = product?.isFood === true;
     if (!isFood) return;
 
-    // Second Schedule rules — many require inspector verification (ingredients, nutrition)
+    // Second Schedule rules
     const rules = [
-      { id: 'PCR_2SCH_01', title: 'Food product name and trade name', input: fields.productName, required: true },
       { id: 'PCR_2SCH_02', title: 'List of ingredients', required: true, reviewOnly: true },
       { id: 'PCR_2SCH_04', title: 'Veg/Non-Veg symbol', required: true, reviewOnly: true },
       { id: 'PCR_2SCH_07', title: 'Batch/Lot identification', input: fields.batchNumber, required: true },
-      { id: 'PCR_2SCH_08', title: 'Date of manufacture/packing', input: fields.mfgDate || fields.packingDate, required: true },
     ];
 
     rules.forEach(r => {
       const rule = this.ruleDb.getRule(r.id);
       if (!rule) return;
-      const detected = r.required && r.input && r.input.status === 'DETECTED';
-      const status = r.reviewOnly ? 'REVIEW' : (detected ? 'PASS' : 'FAIL');
+
+      const detected = r.input ? r.input.status === 'DETECTED' : false;
+      const status = r.reviewOnly ? 'REVIEW' : (detected ? 'PASS' : 'REVIEW');
 
       results.push({
         ruleId: r.id,
@@ -566,18 +597,15 @@ class RuleEngine {
         legalReference: rule.legal_reference,
         reason: r.reviewOnly
           ? 'Requires inspector verification — image alone cannot confirm ingredients, nutrition, veg/non-veg symbol'
-          : (detected ? 'Detected from OCR' : 'Not detected'),
+          : (detected ? 'Detected from OCR' : 'Not detected — inspector verification required'),
       });
     });
   }
 
-  /**
-   * Phase 2: Commodity-specific rules (Fourth Schedule, 14-17)
-   */
   checkCommoditySpecificRules(fields, product, results, findings) {
     if (!product?.category) return;
 
-    // Rule 14 — liquid commodities check
+    // Rule 14 — liquid commodities
     const liquidRule = this.ruleDb.getRule('PCR_R14_01');
     if (liquidRule) {
       const qty = fields.netQuantity?.normalizedValue;
@@ -620,113 +648,98 @@ class RuleEngine {
     }
   }
 
+  // ── Phase 3 & 4: Grouped Physical/Enforcement Checks ───────────────────────
+
   /**
-   * Phase 3: Physical inspection rules (19, 21-22, schedules)
-   * Always REVIEW because they require calibrated measurement
+   * Create grouped physical inspection and enforcement rules.
+   * Returns an array of groups, each with a category and list of rules.
+   * These are rendered as single cards in the UI.
    */
-  checkPhysicalInspectionRules(fields, results, findings) {
-    // Rules that ALWAYS need calibration — never claim PASS/FAIL from image alone
+  createGroupedPhysicalEnforcementChecks(fields, product) {
+    const groups = [];
+
+    // ── Group 1: Physical Inspection Rules (Phase 3) ────────────────────────
     const physicalRules = [
-      { id: 'PCR_R19_01', title: 'MPE — quantity accuracy', category: 'physical_inspection', ref: 'Rule 19 & First Schedule' },
-      { id: 'PCR_R21_01', title: 'Number of packages verification', category: 'physical_inspection', ref: 'Rule 21' },
-      { id: 'PCR_R22_01', title: 'Verification of standard packages', category: 'physical_inspection', ref: 'Rule 22' },
-      { id: 'PCR_5SCH_01', title: 'MPE for weight commodities', category: 'physical_inspection', ref: 'Fifth Schedule Part I' },
-      { id: 'PCR_5SCH_02', title: 'MPE for volume commodities', category: 'physical_inspection', ref: 'Fifth Schedule Part II' },
-      { id: 'PCR_1SCH_01', title: 'Standard net quantity', category: 'physical_inspection', ref: 'First Schedule' },
+      { id: 'PCR_R19_01', title: 'MPE — quantity accuracy', ref: 'Rule 19 & First Schedule' },
+      { id: 'PCR_R21_01', title: 'Number of packages verification', ref: 'Rule 21' },
+      { id: 'PCR_R22_01', title: 'Verification of standard packages', ref: 'Rule 22' },
+      { id: 'PCR_5SCH_01', title: 'MPE for weight commodities', ref: 'Fifth Schedule Part I' },
+      { id: 'PCR_5SCH_02', title: 'MPE for volume commodities', ref: 'Fifth Schedule Part II' },
+      { id: 'PCR_1SCH_01', title: 'Standard net quantity', ref: 'First Schedule' },
+      { id: 'PCR_R7_02', title: 'Numeral height for quantity', ref: 'Rule 7(2)' },
     ];
 
-    physicalRules.forEach(r => {
-      const rule = this.ruleDb.getRule(r.id);
-      if (!rule) return;
-
-      results.push({
+    const physicalRuleResults = physicalRules.map(r => {
+      const rule = this.ruleDb.getRule(r.id) || { rule_id: r.id, source: 'Legal Metrology (Packaged Commodities) Rules, 2011', rule: r.ref.split(' ')[1], title: r.title, category: 'physical_inspection', legal_reference: r.ref };
+      return {
         ruleId: r.id,
         source: rule.source,
         rule: rule.rule,
         title: r.title,
-        category: r.category,
+        category: 'physical_inspection',
         check: r.title,
         input: fields.netQuantity?.normalizedValue || null,
         expected: 'Calibrated measurement required',
         confidence: 0,
         status: 'REVIEW',
         legalReference: r.ref,
-        reason: 'Physical measurement requires calibrated instruments (MPE, reference standards). Image alone cannot determine quantity accuracy. Inspector verification required.',
-      });
-
-      // Add finding linking to quantity field
-      findings.push({
-        findingId: `F-PH-${r.id}-${Date.now()}`,
-        ruleId: r.id,
-        status: 'REVIEW',
-        field: 'netQuantity',
-        detectedText: fields.netQuantity?.value || null,
-        expected: 'Calibrated verification of declared quantity',
-        confidence: 0,
-        imageId: 'unknown',
-        inspectionTime: new Date().toISOString(),
-        inspectorStatus: 'PENDING',
-      });
+        reason: 'Physical measurement requires calibrated instruments (MPE, reference standards, calipers for font height). Image alone cannot determine accuracy. Inspector verification required.',
+      };
     });
-  }
 
-  /**
-   * Phase 4: Enforcement/Registry rules (20, 27-30)
-   * Always REVIEW — never CONFIRMED_VIOLATION without inspector verification
-   */
-  checkEnforcementRegistryRules(fields, product, results, findings) {
-    const registryRules = [
-      { id: 'PCR_R20_01', title: 'Registration of packaged commodity', category: 'enforcement_registry' },
-      { id: 'PCR_R27_01', title: 'Import permit', category: 'enforcement_registry' },
-      { id: 'PCR_R28_01', title: 'Dealer obligations — verification', category: 'enforcement_registry' },
-      { id: 'PCR_R29_01', title: 'Packer responsibility — accuracy', category: 'enforcement_registry' },
-      { id: 'PCR_R30_01', title: 'Penalty provisions', category: 'enforcement_registry' },
+    groups.push({
+      groupId: 'physical-inspection',
+      category: 'Physical Inspection Rules (Phase 3)',
+      description: 'These rules require calibrated instruments and cannot be verified from an uncalibrated photograph. Inspector must use weighing equipment, measuring cylinders, calipers, and reference standards.',
+      status: 'REVIEW',
+      rules: physicalRuleResults,
+    });
+
+    // ── Group 2: Enforcement & Registry Rules (Phase 4) ──────────────────────
+    const enforcementRules = [
+      { id: 'PCR_R20_01', title: 'Registration of packaged commodity', ref: 'Rule 20' },
+      { id: 'PCR_R27_01', title: 'Import permit', ref: 'Rule 27', onlyForImports: true },
+      { id: 'PCR_R28_01', title: 'Dealer obligations — verification', ref: 'Rule 28' },
+      { id: 'PCR_R29_01', title: 'Packer responsibility — accuracy', ref: 'Rule 29' },
+      { id: 'PCR_R30_01', title: 'Penalty provisions', ref: 'Rule 30' },
     ];
 
-    registryRules.forEach(r => {
-      const rule = this.ruleDb.getRule(r.id);
-      if (!rule) return;
+    const isImport = fields.importer?.status === 'DETECTED';
 
-      const isImport = fields.importer?.status === 'DETECTED';
-      const shouldApply = (r.id === 'PCR_R27_01' && isImport) ||
-                          (r.id !== 'PCR_R27_01');
-
-      results.push({
-        ruleId: r.id,
-        source: rule.source,
-        rule: rule.rule,
-        title: r.title,
-        category: r.category,
-        check: r.title,
-        input: null,
-        expected: 'Registry/enforcement verification — inspector action',
-        confidence: 0,
-        status: shouldApply ? 'REVIEW' : 'NOT_APPLICABLE',
-        legalReference: rule.legal_reference,
-        reason: 'Enforcement/registry checks require access to government databases (registration numbers, import permits) and physical inspector verification. Never automated.',
+    const enforcementRuleResults = enforcementRules
+      .filter(r => !r.onlyForImports || isImport)
+      .map(r => {
+        const rule = this.ruleDb.getRule(r.id) || { rule_id: r.id, source: 'Legal Metrology (Packaged Commodities) Rules, 2011', rule: r.ref.split(' ')[1], title: r.title, category: 'enforcement_registry', legal_reference: r.ref };
+        return {
+          ruleId: r.id,
+          source: rule.source,
+          rule: rule.rule,
+          title: r.title,
+          category: 'enforcement_registry',
+          check: r.title,
+          input: null,
+          expected: 'Registry/enforcement verification — inspector action',
+          confidence: 0,
+          status: 'REVIEW',
+          legalReference: r.ref,
+          reason: 'Enforcement/registry checks require access to government databases (registration numbers, import permits, compliance history) and physical inspector verification. Never automated.',
+        };
       });
 
-      if (shouldApply) {
-        findings.push({
-          findingId: `F-ENF-${r.id}-${Date.now()}`,
-          ruleId: r.id,
-          status: 'REVIEW',
-          field: null,
-          detectedText: null,
-          expected: 'Inspector verification with registry access',
-          confidence: 0,
-          imageId: 'unknown',
-          inspectionTime: new Date().toISOString(),
-          inspectorStatus: 'PENDING',
-        });
-      }
+    groups.push({
+      groupId: 'enforcement-registry',
+      category: 'Enforcement & Registry Rules (Phase 4)',
+      description: 'These rules require inspector access to government databases and cannot be verified from an image. Inspector must verify registration, import permits, dealer obligations, and compliance history.',
+      status: 'REVIEW',
+      rules: enforcementRuleResults,
     });
+
+    return groups;
   }
 
-  /**
-   * Create a finding object
-   */
-  createFinding(ruleId, status, field, detectedText, expected, confidence) {
+  // ── Helper ─────────────────────────────────────────────────────────────────
+
+  createFinding(ruleId, status, field, detectedText, expected, confidence, reason) {
     return {
       findingId: `F-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       ruleId,
@@ -735,6 +748,7 @@ class RuleEngine {
       detectedText,
       expected,
       confidence,
+      reason,
       imageId: 'unknown',
       inspectionTime: new Date().toISOString(),
       inspectorStatus: 'PENDING',
