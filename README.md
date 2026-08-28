@@ -1,20 +1,28 @@
 ﻿# SIH - Packaged Commodity Legal Compliance Checker
 
-> **AI-powered OCR system for Indian packaged commodities**
+> **OCR + Legal Metrology compliance engine for Indian packaged commodities**
 
-This repository contains the **OCR Module** for an AI-powered legal compliance checker that validates packaged commodity labeling against Indian Legal Metrology rules.
+This repository contains two cooperating modules:
+
+1. **OCR Module** — Detects text + bounding boxes + confidence from smartphone photos via PaddleOCR.
+2. **Legal Metrology Compliance Engine** — Consumes OCR output, extracts structured fields, classifies the product and package, then runs a deterministic rule engine (2011-baseline) over four phases to produce a compliance report with full OCR traceability and inspector-reviewable evidence.
+
+OCR is unchanged. The compliance engine sits on top as a non-invasive analysis layer.
 
 ---
 
 ## 📋 Table of Contents
 
 - [Quick Start](#quick-start)
-- [What This Module Does](#what-this-module-does)
+- [What This System Does](#what-this-system-does)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Running the Application](#running-the-application)
 - [Testing](#testing)
 - [API Documentation](#api-documentation)
+  - [OCR endpoints](#post-apicr)
+  - [Compliance endpoints](#post-apicomplianceanalyze)
+- [Compliance Engine](#compliance-engine)
 - [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
 
@@ -61,9 +69,9 @@ Then open `http://localhost:3000` in your browser.
 
 ---
 
-## 📦 What This Module Does
+## 📦 What This System Does
 
-This OCR module:
+### OCR Module
 
 - ✅ **Detects text** from smartphone photos of packaged commodities
 - ✅ **Returns bounding boxes** for each detected text region
@@ -71,13 +79,17 @@ This OCR module:
 - ✅ **Preprocesses images** (EXIF rotation, resize, contrast, sharpening)
 - ✅ **Supports multiple images** (front, back, side of package)
 
-**What it does NOT do** (by design):
+### Compliance Engine
 
-- ❌ Field extraction (e.g., identifying "MRP" vs "Net Quantity")
-- ❌ Legal compliance checking
-- ❌ AI interpretation of detected text
-
-These features will be added in the next stages of the project.
+- ✅ **Field extraction** from OCR detections (MRP, net quantity, manufacturer, dates, etc.)
+- ✅ **Product classification** into 16 categories with food/non-food flag
+- ✅ **Package classification** (retail / wholesale / industrial / institutional / imported)
+- ✅ **Applicability check** (Rule 3 — >25 kg/l excluded)
+- ✅ **Exemption check** (Rule 26 — <10 g/ml exempt)
+- ✅ **Deterministic rule engine** — 50+ rules across 4 phases (2011-baseline)
+- ✅ **Evidence generation** — every finding is linked to OCR detection IDs + bounding boxes
+- ✅ **Inspector review** — Phase 3/4 always REVIEW; never fabricates mm or registry data
+- ✅ **Compliance report** — PASS / POTENTIAL_NON_COMPLIANCE / REVIEW with evidence crops
 
 ---
 
@@ -202,34 +214,32 @@ npm start           # Starts Node.js API
 
 1. Open `http://localhost:3000` in your browser
 2. Upload package images (JPG, PNG, WEBP)
-3. Click "Run OCR"
-4. View detected text with bounding boxes overlaid on images
+3. Click "Run OCR" — view detections with bounding boxes
+4. Click "⚖ Analyze Compliance" — view the compliance report
 
-### CLI Test Runner
+### OCR CLI Tests
 
 ```bash
-# Add test images to test-images/ directory
+# Add test images to test-images/
 cp /path/to/your/package/photo.jpg ocr/test-images/
 
-# Run the test
+# Run OCR tests
 npm run test:ocr
 ```
 
-**Sample output:**
-```
-Found 2 image(s): front.jpg, back.jpg
+### Compliance Engine Tests
 
-Image : front.jpg
-Status: ✓ OK
-Size  : 600×400px
-Time  : 1247ms
-Found : 5 detection(s)
-
-Detections:
-  1. [████████████████████] 98.0%
-     Text: "TOOR DAL"
-     Box : TL(178,73) TR(228,73) BR(228,95) BL(178,95)
+```bash
+node ocr/test/compliance.test.js
 ```
+
+All 6 tests pass:
+- Complete package — all declarations detected
+- Missing declarations — findings generated correctly
+- Exempt < 10g — exemption applied
+- Large > 25kg — Chapter II excluded
+- Field extraction — sourceDetectionIds preserved
+- Product classification — 16 categories
 
 ### API Health Check
 
@@ -300,47 +310,131 @@ Check service health.
 }
 ```
 
+### Compliance endpoints
+
+**POST `/api/compliance/analyze`**
+Analyze OCR results for legal metrology compliance.
+
+Request body (output from `POST /api/ocr`):
+```json
+{
+  "results": [
+    {
+      "imageId": "front.jpg",
+      "detections": [
+        {"text":"Toor Dal","confidence":0.97,"boundingBox":[[100,120],[400,120],[400,170],[100,170]]},
+        {"text":"MRP ₹160.00","confidence":0.96,"boundingBox":[[100,300],[400,300],[400,350],[100,350]]}
+      ]
+    }
+  ]
+}
+```
+
+Response (abridged):
+```json
+{
+  "success": true,
+  "product": {"category":"food","isFood":true,"name":"Toor Dal"},
+  "packageType": {"type":"retail_package"},
+  "applicability": {"chapterTwoApplies":true,"reason":"..."},
+  "ruleResults": [...],
+  "findings": [...],
+  "evidence": {"evidenceId":"EV-...","records":[...],"instructions":{...}},
+  "summary": {"pass":3,"fail":0,"review":1,"notApplicable":1},
+  "finalStatus": "REVIEW"
+}
+```
+
+**GET `/api/compliance/health`** — service status.
+
+**GET `/api/compliance/rules?phase=2`** — list rules for a phase.
+
+**GET `/api/compliance/stats`** — counts by phase, categories, calibration-required.
+
+---
+
+## ⚖️ Compliance Engine
+
+The compliance layer is a deterministic pipeline, not an LLM. It does not invent measurements or registry results.
+
+Pipeline:
+
+```
+OCR JSON
+  → FieldExtractor (regex + bounding-box traceability)
+  → ProductClassifier (16 categories)
+  → PackageClassifier (retail/wholesale/industrial/institutional/imported/exported)
+  → Applicability (Rule 3)
+  → Exemption (Rule 26)
+  → RuleEngine (Phase 1 → 2 → 3 → 4)
+  → EvidenceGenerator (Canvas-crop metadata per finding)
+  → Summary + FinalStatus (PASS / POTENTIAL_NON_COMPLIANCE / REVIEW)
+```
+
+**Critical safeguards (never violated):**
+- OCR failure = `MISSING`, never treated as a legal violation.
+- Uncalibrated image = `REVIEW` with reason "Calibration unavailable" — never a fabricated `1.2mm`.
+- Phase 3 (MPE / physical measurements) and Phase 4 (enforcement / registry) always emit `REVIEW`; inspector verification required.
+- Final status never `CONFIRMED_VIOLATION`; only `PASS`, `POTENTIAL_NON_COMPLIANCE`, or `REVIEW`.
+- Every finding carries `ocrDetectionIds`, `boundingBox`, `cropRegion`, `imageId`, `confidence`.
+
+**Phases:**
+- Phase 1: Mandatory declarations (Rule 6), font/display (Rule 7), legibility (Rule 9), quantity expression (Rule 12), standard units (Rule 13)
+- Phase 2: Manufacturer ≠ packer (Rule 5), Second Schedule (food), Fourth Schedule, Rules 14–17
+- Phase 3: Rule 19 (MPE), Rules 21–22, First / Fifth / Sixth / Seventh Schedules — always REVIEW
+- Phase 4: Rules 20, 27–30 (enforcement / registry) — always REVIEW
+
 ---
 
 ## 📁 Project Structure
 
 ```
 SIH/
-├── ocr/                          # OCR Module
+├── ocr/
 │   ├── service/                  # Python OCR Microservice
 │   │   ├── app.py               # Flask entry point
-│   │   ├── detection/
-│   │   │   └── engine.py        # PaddleOCR engine
-│   │   ├── preprocessing/
-│   │   │   └── pipeline.py      # Image preprocessing
-│   │   ├── models/
-│   │   │   └── config.py        # Configuration
-│   │   └── requirements.txt     # Python dependencies
+│   │   ├── detection/engine.py  # PaddleOCR engine
+│   │   ├── preprocessing/       # Image preprocessing
+│   │   ├── models/config.py     # Configuration
+│   │   └── requirements.txt
 │   │
 │   ├── api/                      # Node.js API Layer
-│   │   ├── ocrRoutes.js         # Express routes
-│   │   └── ocrProvider.js       # Provider abstraction
+│   │   ├── ocrRoutes.js         # POST /api/ocr
+│   │   ├── ocrProvider.js       # Provider abstraction
+│   │   └── complianceRoutes.js   # POST /api/compliance/*
+│   │
+│   ├── compliance/               # Legal Metrology compliance engine
+│   │   ├── complianceManager.js  # Orchestrator (extract → classify → rules → evidence)
+│   │   ├── fieldExtractor.js     # Regex field extraction with bbox traceability
+│   │   ├── productClassifier.js  # 16 product categories
+│   │   ├── ruleDatabase.js       # 50+ structured rules (Phase 1–4)
+│   │   ├── ruleEngine.js         # Deterministic rule execution
+│   │   └── evidenceGenerator.js  # Canvas-crop metadata per finding
 │   │
 │   ├── schemas/
-│   │   └── ocrSchema.js         # Zod validation
+│   │   ├── ocrSchema.js
+│   │   └── complianceSchema.js   # Zod validation for compliance responses
+│   │
+│   ├── rules/
+│   │   └── 2011-baseline/        # Structured rule data
+│   │       └── rule6-06.json
 │   │
 │   ├── public/
-│   │   └── index.html           # Testing page
+│   │   └── index.html           # Testing + compliance UI (one page)
+│   │
+│   ├── test/
+│   │   └── compliance.test.js   # 6-test compliance suite
 │   │
 │   ├── tests/
-│   │   ├── testOCR.js           # CLI test runner
+│   │   ├── testOCR.js           # CLI OCR test runner
 │   │   └── test_engine.py       # Python test
 │   │
-│   ├── test-images/             # Sample images
-│   │   ├── front.jpg
-│   │   └── back.jpg
-│   │
+│   ├── test-images/             # Sample package images
 │   ├── server.js                # Node.js entry point
 │   ├── package.json
 │   ├── .env.example
 │   ├── start.bat                # Quick start script
-│   ├── README.md                # Detailed module docs
-│   └── IMPLEMENTATION_REPORT.md # Technical details
+│   └── README.md                # Detailed module docs
 │
 └── README.md                     # This file
 ```
@@ -465,19 +559,26 @@ set SSL_CERT_FILE=%USERPROFILE%\AppData\Local\Programs\Python\Python312\Lib\site
 ## 🛣️ Roadmap
 
 ### ✅ Completed
-- OCR text detection
-- Bounding box extraction
-- Confidence scoring
-- Image preprocessing
-- Web testing interface
-- API layer
+- OCR text detection + bounding boxes + confidence
+- Image preprocessing (EXIF, CLAHE, sharpening)
+- Field extraction (regex-based, OCR-traceable)
+- Product classification (16 categories, food/non-food)
+- Package classification (retail/wholesale/industrial/institutional/imported)
+- Applicability & exemption checks (Rule 3, Rule 26)
+- Deterministic rule engine — Phase 1 (mandatory declarations)
+- Deterministic rule engine — Phase 2 (product-aware)
+- Deterministic rule engine — Phase 3 (physical inspection, REVIEW-only)
+- Deterministic rule engine — Phase 4 (enforcement/registry, REVIEW-only)
+- Evidence generation (Canvas-crop metadata per finding)
+- Compliance UI in browser
+- 6/6 compliance tests
 
 ### 🚧 Next Stages
-1. **AI Field Extraction** — LLM/Vision to interpret detected text
-2. **Legal Metrology RAG** — Rule retrieval for product categories
-3. **Compliance Engine** — Validation against Indian Legal Metrology rules
-4. **User Interface** — Production-ready web application
-5. **Deployment** — Cloud hosting and scaling
+1. **CI/CD** — automated test runner on push
+2. **Real-image validation** — test on actual package photos
+3. **Camera calibration UI** — physical font measurement workflow
+4. **Inspector verification UI** — approve/reject REVIEW findings
+5. **Compliance report export** — PDF generation
 
 ---
 
@@ -510,3 +611,4 @@ For issues or questions:
 ---
 
 **Last Updated:** 2026-08-28
+**Compliance Engine Version:** 2011-baseline (Phases 1–4)
