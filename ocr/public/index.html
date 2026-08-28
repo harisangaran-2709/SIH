@@ -136,6 +136,129 @@
 
     /* Empty state */
     .empty { text-align: center; color: #334155; padding: 64px; font-size: 1rem; }
+
+    /* ── Compliance panel ── */
+    #compliance-results { margin-top: 24px; }
+
+    .compliance-card {
+      background: #1a2234;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #1e2736;
+      margin-bottom: 24px;
+    }
+
+    .compliance-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #1e2736;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .compliance-header h2 { font-size: 1.1rem; color: #e2e8f0; }
+    .compliance-header h2 .badge {
+      display: inline-block; padding: 4px 12px; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 700; margin-left: 8px;
+    }
+    .badge-pass    { background: #14532d; color: #4ade80; }
+    .badge-fail    { background: #450a0a; color: #f87171; }
+    .badge-review  { background: #713f12; color: #fb923c; }
+
+    .compliance-meta {
+      display: flex; gap: 16px; font-size: 0.8rem; color: #64748b; flex-wrap: wrap;
+    }
+
+    .compliance-body { padding: 24px; }
+
+    /* Summary row */
+    .summary-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px; margin-bottom: 24px;
+    }
+    .summary-cell {
+      background: #0f1117; border-radius: 8px; padding: 16px; text-align: center;
+    }
+    .summary-cell .num { font-size: 1.8rem; font-weight: 700; }
+    .summary-cell .lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+    .cell-pass   .num { color: #4ade80; }
+    .cell-fail   .num { color: #f87171; }
+    .cell-review  .num { color: #fb923c; }
+    .cell-na      .num { color: #64748b; }
+    .cell-info    .num { color: #60a5fa; }
+
+    /* Classification row */
+    .classify-row {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .classify-chip {
+      background: #1e2736; border-radius: 8px; padding: 8px 14px;
+      font-size: 0.85rem; color: #94a3b8;
+    }
+    .classify-chip strong { color: #e2e8f0; }
+
+    /* Section headers */
+    .section-hdr {
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #64748b; margin: 24px 0 12px; border-bottom: 1px solid #1e2736;
+      padding-bottom: 6px;
+    }
+
+    /* Declarations table */
+    .decl-table { width: 100%; border-collapse: collapse; }
+    .decl-table th {
+      text-align: left; padding: 8px 12px; font-size: 0.75rem;
+      text-transform: uppercase; letter-spacing: 0.08em; color: #64748b;
+      border-bottom: 1px solid #1e2736;
+    }
+    .decl-table td {
+      padding: 10px 12px; font-size: 0.85rem; border-bottom: 1px solid #1e2736;
+    }
+    .decl-table tr:hover { background: #1e2736; }
+    .decl-table .status-cell { text-align: center; }
+    .decl-pass  { background: #14532d; color: #4ade80; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    .decl-fail  { background: #450a0a; color: #f87171; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    .decl-review{ background: #713f12; color: #fb923c; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    .decl-na    { background: #1e2736; color: #64748b; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+
+    /* Findings list */
+    .finding-item {
+      background: #0f1117; border-radius: 8px; padding: 14px 16px;
+      margin-bottom: 10px; border-left: 4px solid #334155;
+    }
+    .finding-item.sev-high   { border-left-color: #f87171; }
+    .finding-item.sev-medium { border-left-color: #fb923c; }
+    .finding-item.sev-low    { border-left-color: #4ade80; }
+    .finding-item.sev-info   { border-left-color: #60a5fa; }
+
+    .finding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .finding-rule { font-size: 0.75rem; color: #64748b; font-family: monospace; }
+    .finding-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+    .finding-detail { font-size: 0.85rem; color: #94a3b8; }
+    .finding-detail strong { color: #e2e8f0; }
+    .finding-reason { font-size: 0.78rem; color: #64748b; margin-top: 6px; font-style: italic; }
+
+    /* Evidence crops grid */
+    .evidence-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px; margin-top: 12px;
+    }
+    .evidence-crop {
+      background: #0f1117; border-radius: 8px; overflow: hidden;
+      border: 1px solid #1e2736;
+    }
+    .evidence-crop canvas {
+      display: block; width: 100%; height: 160px; object-fit: contain;
+      background: #0a0d14;
+    }
+    .evidence-crop-info {
+      padding: 8px 12px; font-size: 0.75rem; color: #64748b;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .evidence-crop-info strong { color: #94a3b8; }
+
+    /* Phase badges */
+    .phase-badge {
+      background: #1e2736; border-radius: 4px; padding: 1px 6px;
+      font-size: 0.7rem; color: #60a5fa; margin-left: 6px;
+    }
   </style>
 </head>
 <body>
@@ -158,6 +281,7 @@
   <!-- Controls -->
   <div class="controls">
     <button id="run-btn" disabled onclick="runOCR()">▶ Run OCR</button>
+    <button id="compliance-btn" disabled onclick="runCompliance()">⚖ Analyze Compliance</button>
     <button id="clear-btn" onclick="clearAll()">✕ Clear</button>
     <div class="status">
       <div class="spinner" id="spinner"></div>
@@ -168,11 +292,16 @@
   <!-- Results -->
   <div id="results"><div class="empty">No results yet</div></div>
 
+  <!-- Compliance results panel -->
+  <div id="compliance-results" style="display:none"></div>
+
 </main>
 
 <script>
 const API = '/api/ocr';
+const COMPLIANCE_API = '/api/compliance/analyze';
 let selectedFiles = [];
+let lastOcrResults = null; // stored so compliance button can use it
 
 // ---- File selection ----
 document.getElementById('file-input').addEventListener('change', e => {
@@ -194,6 +323,7 @@ function onFilesSelected() {
   document.getElementById('file-list').textContent =
     selectedFiles.length ? selectedFiles.map(f => f.name).join(', ') : '';
   document.getElementById('run-btn').disabled = selectedFiles.length === 0;
+  document.getElementById('compliance-btn').disabled = selectedFiles.length === 0;
   setStatus('');
 }
 
@@ -215,6 +345,7 @@ async function runOCR() {
       return;
     }
     renderResults(data.results, selectedFiles);
+    lastOcrResults = data; // save for compliance
     const total = data.results.reduce((s, r) => s + (r.detections?.length || 0), 0);
     setStatus(`✓ ${data.results.length} image(s) · ${total} detections`);
   } catch (err) {
@@ -222,6 +353,234 @@ async function runOCR() {
   } finally {
     setLoading(false);
   }
+}
+
+// ---- Compliance Analysis ----
+async function runCompliance() {
+  if (!lastOcrResults) {
+    alert('Please run OCR first');
+    return;
+  }
+
+  setLoading(true);
+  setStatus('Running compliance analysis…');
+
+  try {
+    const res = await fetch(COMPLIANCE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lastOcrResults),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      showError(data.error || 'Compliance analysis failed');
+      return;
+    }
+    renderComplianceResults(data);
+    setStatus(`✓ Compliance analyzed — ${data.summary.pass} pass · ${data.summary.fail} fail · ${data.summary.review} review`);
+  } catch (err) {
+    showError('Network error: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderComplianceResults(data) {
+  const panel = document.getElementById('compliance-results');
+  panel.style.display = 'block';
+
+  const statusBadge = data.finalStatus === 'PASS'
+    ? '<span class="badge badge-pass">PASS</span>'
+    : data.finalStatus === 'POTENTIAL_NON_COMPLIANCE'
+    ? '<span class="badge badge-fail">POTENTIAL NON-COMPLIANCE</span>'
+    : '<span class="badge badge-review">REVIEW REQUIRED</span>';
+
+  panel.innerHTML = `
+    <div class="compliance-card">
+      <div class="compliance-header">
+        <h2>⚖ Compliance Analysis ${statusBadge}</h2>
+        <div class="compliance-meta">
+          <span><b>Version</b> ${data.ruleVersion}</span>
+          <span><b>Date</b> ${new Date(data.inspectionDate).toLocaleString()}</span>
+          <span><b>Product</b> ${data.product?.category || 'unknown'}${data.product?.isFood ? ' (food)' : ''}</span>
+          <span><b>Package</b> ${data.packageType?.type || 'unknown'}</span>
+          ${!data.applicability?.chapterTwoApplies ? '<span style="color:#fb923c"><b>⚠ Chapter II does not apply</b></span>' : ''}
+          ${data.exemption?.isExempt ? '<span style="color:#fb923c"><b>⚠ Exempt under Rule 26</b></span>' : ''}
+        </div>
+      </div>
+      <div class="compliance-body">
+        ${renderComplianceSummary(data)}
+        ${renderDeclarationsTable(data.declarations)}
+        ${renderFindings(data.findings, data.evidence)}
+        ${renderEvidenceCrops(data.evidence)}
+        ${renderRuleResults(data.ruleResults)}
+      </div>
+    </div>
+  `;
+
+  // Scroll to compliance panel
+  panel.scrollIntoView({ behavior: 'smooth' });
+
+  // Generate evidence crops after DOM is ready
+  if (data.evidence?.records?.length) {
+    generateEvidenceCrops(data.evidence.records, panel);
+  }
+}
+
+function renderComplianceSummary(data) {
+  const s = data.summary;
+  return `
+    <div class="summary-row">
+      <div class="summary-cell cell-pass"><div class="num">${s.pass}</div><div class="lbl">Pass</div></div>
+      <div class="summary-cell cell-fail"><div class="num">${s.fail}</div><div class="lbl">Fail</div></div>
+      <div class="summary-cell cell-review"><div class="num">${s.review}</div><div class="lbl">Review</div></div>
+      <div class="summary-cell cell-na"><div class="num">${s.notApplicable}</div><div class="lbl">N/A</div></div>
+    </div>
+    <div class="classify-row">
+      <div class="classify-chip"><strong>Product:</strong> ${data.product?.category || '?'} ${data.product?.confidence ? `(${(data.product.confidence*100).toFixed(0)}%)` : ''}</div>
+      <div class="classify-chip"><strong>Package:</strong> ${data.packageType?.type || '?'} ${data.packageType?.confidence ? `(${(data.packageType.confidence*100).toFixed(0)}%)` : ''}</div>
+      <div class="classify-chip"><strong>Food:</strong> ${data.product?.isFood ? 'Yes' : 'No'}</div>
+    </div>
+  `;
+}
+
+function renderDeclarationsTable(declarations) {
+  if (!declarations || Object.keys(declarations).length === 0) return '';
+  const fields = [
+    { key: 'manufacturer', label: 'Manufacturer/Packer/Importer' },
+    { key: 'productName', label: 'Product Name' },
+    { key: 'netQuantity', label: 'Net Quantity' },
+    { key: 'date', label: 'Mfg/Packing Date' },
+    { key: 'mrp', label: 'MRP' },
+    { key: 'consumerCare', label: 'Consumer Care' },
+  ];
+  let rows = '';
+  for (const [key, decl] of Object.entries(declarations)) {
+    const f = fields.find(f => f.key === key) || { label: key };
+    const statusClass = decl.status === 'PASS' ? 'decl-pass'
+      : decl.status === 'FAIL' ? 'decl-fail'
+      : decl.status === 'REVIEW' ? 'decl-review' : 'decl-na';
+    rows += `
+      <tr>
+        <td>${escHtml(f.label)}</td>
+        <td>${escHtml(String(decl.value || '—'))}</td>
+        <td class="status-cell"><span class="${statusClass}">${decl.status}</span></td>
+        <td style="color:#64748b;font-size:0.75rem">${decl.reason || ''}</td>
+      </tr>`;
+  }
+  return `
+    <div class="section-hdr">📋 Mandatory Declarations (Rule 6)</div>
+    <table class="decl-table">
+      <thead><tr><th>Field</th><th>Value</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderFindings(findings, evidence) {
+  if (!findings || findings.length === 0) return '';
+  const severityClass = { HIGH: 'sev-high', MEDIUM: 'sev-medium', LOW: 'sev-low', INFO: 'sev-info' };
+  let items = findings.map(f => {
+    const sevClass = f.status === 'FAIL' ? 'sev-high' : f.status === 'REVIEW' ? 'sev-medium' : 'sev-low';
+    const statusBadge = f.status === 'FAIL' ? 'decl-fail' : f.status === 'REVIEW' ? 'decl-review' : 'decl-pass';
+    return `
+      <div class="finding-item ${sevClass}">
+        <div class="finding-header">
+          <span class="finding-rule">${escHtml(f.ruleId || '')}</span>
+          <span class="finding-status ${statusBadge}">${f.status}</span>
+        </div>
+        <div class="finding-detail">
+          <strong>${escHtml(f.field || '—')}</strong>
+          ${f.detectedText ? ` — "${escHtml(String(f.detectedText))}"` : ''}
+          ${f.expected ? `<br>Expected: ${escHtml(f.expected)}` : ''}
+        </div>
+        ${f.confidence > 0 ? `<div class="finding-reason">Confidence: ${(f.confidence*100).toFixed(0)}%</div>` : ''}
+      </div>`;
+  }).join('');
+  return `<div class="section-hdr">🔍 Findings (${findings.length})</div>${items}`;
+}
+
+function renderEvidenceCrops(evidence) {
+  if (!evidence?.records?.length) return '';
+  return `<div class="section-hdr">📷 Evidence Crops — <span style="font-size:0.7rem">Hover crops to see detection</span></div>
+    <div class="evidence-grid" id="evidence-grid">
+      ${evidence.records.map((r, i) => `
+        <div class="evidence-crop" id="ecrop-${i}">
+          <canvas id="ecanvas-${i}"></canvas>
+          <div class="evidence-crop-info">
+            <strong>${escHtml(r.field || '?')}</strong> — ${r.status}
+            ${r.sourceText ? `<br>${escHtml(r.sourceText.substring(0, 30))}` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function generateEvidenceCrops(records, panel) {
+  // Find all image canvases in results
+  const imageCanvases = document.querySelectorAll('.canvas-panel canvas');
+  if (imageCanvases.length === 0) return;
+
+  records.forEach((rec, i) => {
+    const canvas = document.getElementById(`ecanvas-${i}`);
+    if (!canvas) return;
+
+    const sourceCanvas = imageCanvases[0]; // use first image as source
+    const ctx = canvas.getContext('2d');
+
+    const region = rec.cropRegion || { x: 0, y: 0, width: 200, height: 160 };
+    canvas.width = region.width;
+    canvas.height = region.height;
+
+    try {
+      ctx.drawImage(
+        sourceCanvas,
+        region.x, region.y, region.width, region.height,
+        0, 0, canvas.width, canvas.height
+      );
+    } catch (e) {
+      // Canvas cross-origin error or missing image — draw placeholder
+      ctx.fillStyle = '#1e2736';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px monospace';
+      ctx.fillText('Image unavailable', 8, 20);
+    }
+  });
+}
+
+function renderRuleResults(ruleResults) {
+  if (!ruleResults || ruleResults.length === 0) return '';
+  const phases = { 1: 'Phase 1 — Image', 2: 'Phase 2 — Product', 3: 'Phase 3 — Physical', 4: 'Phase 4 — Registry' };
+  const phaseMap = {};
+  ruleResults.forEach(r => {
+    // Infer phase from ruleId prefix
+    let phase = 1;
+    if (r.ruleId?.startsWith('PCR_R5') || r.ruleId?.startsWith('PCR_R6_0') || r.ruleId?.startsWith('PCR_R14') || r.ruleId?.startsWith('PCR_R15') || r.ruleId?.startsWith('PCR_R16') || r.ruleId?.startsWith('PCR_R17')) phase = 2;
+    if (r.ruleId?.includes('SCH') && ['PCR_2SCH', 'PCR_4SCH'].some(p => r.ruleId?.startsWith(p))) phase = 2;
+    if (r.ruleId?.includes('SCH') && ['PCR_5SCH', 'PCR_6SCH', 'PCR_7SCH', 'PCR_1SCH'].some(p => r.ruleId?.startsWith(p))) phase = 3;
+    if (r.ruleId?.startsWith('PCR_R19') || r.ruleId?.startsWith('PCR_R2')) phase = 3;
+    if (r.ruleId?.startsWith('PCR_R20') || r.ruleId?.startsWith('PCR_R27') || r.ruleId?.startsWith('PCR_R28') || r.ruleId?.startsWith('PCR_R29') || r.ruleId?.startsWith('PCR_R30')) phase = 4;
+    if (!phaseMap[phase]) phaseMap[phase] = [];
+    phaseMap[phase].push(r);
+  });
+
+  let html = '';
+  for (const [phase, rules] of Object.entries(phaseMap)) {
+    const phaseName = phases[phase] || `Phase ${phase}`;
+    html += `<div class="section-hdr">${phaseName}</div>`;
+    rules.forEach(r => {
+      const statusClass = r.status === 'PASS' ? 'decl-pass' : r.status === 'FAIL' ? 'decl-fail' : r.status === 'REVIEW' ? 'decl-review' : 'decl-na';
+      html += `
+        <div style="margin-bottom:8px;padding:10px;background:#0f1117;border-radius:6px;border-left:3px solid ${r.status==='PASS'?'#4ade80':r.status==='FAIL'?'#f87171':'#fb923c'}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.8rem;color:#94a3b8">${escHtml(r.ruleId || '')}</span>
+            <span class="${statusClass}">${r.status}</span>
+          </div>
+          <div style="font-size:0.85rem;color:#e2e8f0;margin-top:4px">${escHtml(r.title || '')}</div>
+          <div style="font-size:0.75rem;color:#64748b;margin-top:2px">${escHtml(r.reason || '')}</div>
+        </div>`;
+    });
+  }
+  return html;
 }
 
 // ---- Render results ----
@@ -427,10 +786,14 @@ function showError(msg) {
 
 function clearAll() {
   selectedFiles = [];
+  lastOcrResults = null;
   document.getElementById('file-input').value = '';
   document.getElementById('file-list').textContent = '';
   document.getElementById('run-btn').disabled = true;
+  document.getElementById('compliance-btn').disabled = true;
   document.getElementById('results').innerHTML = '<div class="empty">No results yet</div>';
+  document.getElementById('compliance-results').style.display = 'none';
+  document.getElementById('compliance-results').innerHTML = '';
   setStatus('Select images to begin');
 }
 

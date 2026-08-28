@@ -1,0 +1,26 @@
+{
+  "rule_id": "PCR_R6_06",
+  "source": "Legal Metrology (Packaged Commodities) Rules, 2011",
+  "rule": "6",
+  "subrule": "6",
+  "title": "MRP declaration",
+  "category": "mandatory_declaration",
+  "version": "2011-baseline",
+  "effective_from": null,
+  "effective_to": null,
+  "amendment_id": null,
+  "product_scope": [],
+  "input_fields": ["mrp"],
+  "detection": {
+    "method": ["ocr", "layout_detection"]
+  },
+  "validation": {
+    "type": "presence_and_structure",
+    "required": true,
+    "format": "MRP declaration with amount"
+  },
+  "evidence_required": true,
+  "physical_verification_required": false,
+  "human_review_on_ambiguity": true,
+  "legal_reference": "Rule 6(6) - Every package shall bear the retail sale price (inclusive of all taxes)"
+}

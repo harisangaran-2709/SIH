@@ -18,6 +18,7 @@ const path = require("path");
 const express = require("express");
 
 const ocrRoutes = require("./api/ocrRoutes");
+const complianceRoutes = require("./api/complianceRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,20 +32,25 @@ app.use(express.json());
 // OCR API
 app.use("/api/ocr", ocrRoutes);
 
+// Compliance API
+app.use("/api/compliance", complianceRoutes);
+
 // Catch-all 404
 app.use((_req, res) => res.status(404).json({ error: "Not found" }));
 
 app.listen(PORT, () => {
   console.log(`
-╔══════════════════════════════════════════════════════╗
-║   OCR Module – Node.js API                          ║
-╠══════════════════════════════════════════════════════╣
-║   Testing page : http://localhost:${PORT}/              ║
-║   OCR endpoint : POST http://localhost:${PORT}/api/ocr   ║
-║   Health check : GET  http://localhost:${PORT}/api/ocr/health ║
-╠══════════════════════════════════════════════════════╣
-║   Python OCR service URL : ${process.env.OCR_SERVICE_URL || "http://localhost:8000"}      ║
-║   Start it with: npm run start:ocr                  ║
-╚══════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════╗
+║   Legal Metrology Compliance Engine – Node.js API          ║
+╠══════════════════════════════════════════════════════════════╣
+║   Testing page      : http://localhost:${PORT}/                  ║
+║   OCR endpoint      : POST http://localhost:${PORT}/api/ocr       ║
+║   Compliance analyze: POST http://localhost:${PORT}/api/compliance/analyze ║
+║   Health checks     : GET  http://localhost:${PORT}/api/ocr/health ║
+║                       GET  http://localhost:${PORT}/api/compliance/health ║
+╠══════════════════════════════════════════════════════════════╣
+║   Python OCR service URL : ${process.env.OCR_SERVICE_URL || "http://localhost:8000"}          ║
+║   Start it with: npm run start:ocr                          ║
+╚══════════════════════════════════════════════════════════════╝
 `);
 });

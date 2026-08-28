@@ -59,3 +59,6 @@ Thumbs.db
 *.output
 paddle_install.log
 paddleocr_install.log
+test-output/
+visualize_ocr.py
+ocr/.gitignore
